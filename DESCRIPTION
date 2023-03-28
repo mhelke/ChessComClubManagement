@@ -1,0 +1,12 @@
+Package: ChessComClubManagement
+Type: Package
+Title: Retrieve data for a chess.com club
+Version: 0.1.0
+Author: Matthew Helke
+Maintainer: The package maintainer <matthewhelke52@gmail.com>
+Description: Retrieve cleaned data for any chess.com club.
+    - Retrieve member details
+    - Retrieve team match details
+License: MIT
+Encoding: UTF-8
+LazyData: true
