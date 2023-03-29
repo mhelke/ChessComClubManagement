@@ -1,7 +1,7 @@
-#######################################
-# Required Imports
-# Must be installed to use this package
-#######################################
+##############################################
+###         Required Imports              ####
+### Must be installed to use this package ####
+##############################################
 
 require(tidyverse)
 require(jsonlite)
@@ -38,7 +38,7 @@ getMatchDetailsForMatches <- function(clubId, match_ids) {
 #' @description Collects the details of the specified team match into a tibble
 #' @param clubId ID of the club you want match details for
 #' @param match_id ID of the match you want details for
-#' @note Please use `getMatchDetailsForMatches` if details for multiple matches are needed. It will automatically bind them all into a single tibble
+#' @note Use `getMatchDetailsForMatches` if details for multiple matches are needed. It will automatically bind them all into a single tibble
 #' @return Tibble of match data
 #' @seealso `getMatchDetailsForMatches`
 #' @export
@@ -182,107 +182,29 @@ getMatchUrls <- function(clubId, include_finished = TRUE, include_in_progress = 
   return(matches)
 }
 
-## Upcoming Matches ##
-getUpcomingTeamMatches <- function(clubId) {
-  baseUrl <- "https://api.chess.com/pub/club/"
-  endpoint <- paste0(baseUrl, clubId, "/matches", sep = "", collapse = NULL)
-
-  club_matches_raw <- try(fromJSON(toString(endpoint), flatten = TRUE)) # raw data of member activity (username, join date)
-
-  club_matches <- club_matches_raw$registered %>%
-    as_tibble() %>%
-    mutate(start_time = as.Date(as.POSIXct(start_time, origin="1970-01-01"))) %>%
-    arrange(desc(start_time))
-  return(club_matches)
-}
-
-## In-progress Matches ##
-getInProgressTeamMatches <- function(clubId) {
-  baseUrl <- "https://api.chess.com/pub/club/"
-  endpoint <- paste0(baseUrl, clubId, "/matches", sep = "", collapse = NULL)
-
-  club_matches_raw <- try(fromJSON(toString(endpoint), flatten = TRUE)) # raw data of member activity (username, join date)
-
-  club_matches <- club_matches_raw$in_progress %>%
-    as_tibble() %>%
-    mutate(start_time = as.Date(as.POSIXct(start_time, origin="1970-01-01"))) %>%
-    arrange(desc(start_time))
-  return(club_matches)
-}
-
-## Finished Matches ##
-getFinishedTeamMatches <- function(clubId) {
-  baseUrl <- "https://api.chess.com/pub/club/"
-  endpoint <- paste0(baseUrl, clubId, "/matches", sep = "", collapse = NULL)
-
-  club_matches_raw <- try(fromJSON(toString(endpoint), flatten = TRUE)) # raw data of member activity (username, join date)
-
-  club_matches <- club_matches_raw$finished %>%
-    as_tibble() %>%
-    mutate(start_time = as.Date(as.POSIXct(start_time, origin="1970-01-01"))) %>%
-    arrange(desc(start_time))
-  return(club_matches)
-}
-
-# to get opponents, total players in match, total registered, total in progress, total completed, etc.
-getMatchStatistics <- function(clubId) { }
-
-# gets active matches, total players needed, the total expected wins based on rating, average rating. Rating range
-# where the team might be outmatched.
-getMatchProjections <- function(clubId) { }
-
 ##########################
 ### MEMEBER MANAGEMENT ###
 ##########################
 
 #' @description Retrieves all members of a given club
 #' @param clubId ID of the club you want the list of members for
-#' @return Tibble of members and the date they joined the club
+#' @return A list of members grouped by activity level (weekly, monthly,  all-time (inactive))
+#' @seealso `getAllClubMembers` which returns the same data already merged into one table
 #' @export
-getAllMembers <- function(clubId) {
+getAllMembersByActivity <- function(clubId) {
   print(paste0("Fetching members for club: ", clubId))
   baseUrl <- "https://api.chess.com/pub/club/"
   endpoint <- paste0(baseUrl, clubId, "/members", sep = "", collapse = NULL)
-  member_activity_raw <- try(fromJSON(toString(endpoint), flatten = TRUE)) # raw data of member activity (username, join date)
+  member_activity_raw <- try(fromJSON(toString(endpoint), flatten = TRUE))
   return(member_activity_raw)
 }
 
-## Weekly active members ##
-getWeeklyActiveMembers <- function(clubId) {
-  member_activity_raw <- getAllMembers(clubId)
-
-  weekly_activity <- member_activity_raw$weekly %>%
-    as_tibble() %>%
-    mutate(joined = as.Date(as.POSIXct(joined, origin="1970-01-01"))) %>%
-    arrange(desc(joined))
-  return(weekly_activity)
-}
-
-## Monthly active members ##
-getMonthlyActiveMembers <- function(clubId) {
-  member_activity_raw <- getAllMembers(clubId)
-
-  monthly_activity <- member_activity_raw$monthly %>%
-    as_tibble() %>%
-    mutate(joined = as.Date(as.POSIXct(joined, origin="1970-01-01"))) %>%
-    arrange(desc(joined))
-  return(monthly_activity)
-}
-
-## All time active members ##
-getAllTimeActiveMembers <- function(clubId) {
-  member_activity_raw <- getAllMembers(clubId)
-
-  all_time_activity <- member_activity_raw$all_time %>%
-    as_tibble() %>%
-    mutate(joined = as.Date(as.POSIXct(joined, origin="1970-01-01"))) %>%
-    arrange(desc(joined))
-  return(all_time_activity)
-}
-
-## Get all club members ##
+#' @description Retrieves all members of a given club
+#' @param clubId ID of the club you want the members of
+#' @return A Tibble of all members in the club and their join date
+#' @export
 getAllClubMembers <- function(clubId) {
-  all_members_by_activity <- getAllMembers(clubId)
+  all_members_by_activity <- getAllMembersByActivity(clubId)
   weekly_members <- all_members_by_activity$weekly
   monthly_members <- all_members_by_activity$monthly
   all_time_members <- all_members_by_activity$all_time
@@ -339,7 +261,7 @@ getUserStats <- function(userId) {
   user_stats <- as.data.frame(t(user_stats_unlisted))
   seconds_in_hour <- 60*60
 
-  user_stats <- add_cols(
+  user_stats <- .add_cols(
     user_stats,
     c("chess_daily.last.rating", "chess960_daily.last.rating", "chess_daily.record.time_per_move", "chess_daily.record.timeout_percent"))
 
@@ -390,21 +312,25 @@ getAllMemberStats <- function(clubId) {
   return(user_details)
 }
 
-##########################
-### Helper Functions ###
-##########################
-
-# Checks the data frame for the provided columns.If they do not exist, they're added and filled with NA values.
-add_cols <- function(df, cols) {
-  add <- cols[!cols %in% names(df)]
-  if(length(add) != 0) df[add] <- NA
-  return(df)
-}
-
+#' @description Calls the chess.com country API to get the country name. Provided only for convenience since all returns by default will not convert the country
+#' @param countryEndpoint the URL for the chess.com country API
+#' @return The name of the country
+#' @export
 convertCountryCode <- function(countryEndpoint) {
   if(is.na(countryEndpoint)) {
     return(NA)
   }
   country_info <- try(fromJSON(toString(countryEndpoint), flatten = TRUE)) # raw data of member activity (username, join date)
   return(country_info$name)
+}
+
+################################
+### Private Helper Functions ###
+################################
+
+# Checks the data frame for the provided columns.If they do not exist, they're added and filled with NA values.
+.add_cols <- function(df, cols) {
+  add <- cols[!cols %in% names(df)]
+  if(length(add) != 0) df[add] <- NA
+  return(df)
 }
