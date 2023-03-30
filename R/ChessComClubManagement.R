@@ -73,12 +73,14 @@ getMatchDetails <- function(clubId, match_id) {
   if(found_matching_team) {
     # No players have registered yet, return an empty tibble
     if(!"players" %in% names(my_team)) {
+      warning(paste0("Could not find players for team ", clubId, " for match ", match_id))
       return(empty_tibble)
     }
 
     my_team_players <- my_team$players %>% as.data.frame()
 
     if(all(dim(my_team_players)) == 0) {
+      warning(paste0("No players registered for team ", clubId, " for match ", match_id))
       return(empty_tibble)
     }
 
@@ -113,6 +115,7 @@ getMatchDetails <- function(clubId, match_id) {
 
     } else {
     my_team_players = empty_tibble
+    warning(paste0("Could not find team for ", clubId, " for match ", match_id))
   }
   return(my_team_players)
 }
@@ -150,7 +153,7 @@ getMatchIds <- function(clubId, include_finished = TRUE, include_in_progress = T
 #' @return List of match URLs
 #' @export
 getMatchUrls <- function(clubId, include_finished = TRUE, include_in_progress = TRUE, include_upcoming = TRUE) {
-  print("Fetching team match URLs")
+  print("Fetching team match URLs from the past 90 days")
   baseUrl <- "https://api.chess.com/pub/club/"
   endpoint <- paste0(baseUrl, clubId, "/matches", sep = "", collapse = NULL)
 
@@ -203,6 +206,7 @@ getAllMembersByActivity <- function(clubId) {
 #' @param clubId ID of the club you want the members of
 #' @return A Tibble of all members in the club and their join date
 #' @export
+#' @
 getAllClubMembers <- function(clubId) {
   all_members_by_activity <- getAllMembersByActivity(clubId)
   weekly_members <- all_members_by_activity$weekly
