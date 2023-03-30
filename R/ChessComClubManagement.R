@@ -15,7 +15,6 @@ require(dplyr)
 #' @param clubId ID of the club you want matches details for
 #' @param match_ids List of IDs of the matches you want details for
 #' @return Tibble of all specified match data
-#' @seealso `getMatchDetails`
 #' @export
 getMatchDetailsForMatches <- function(clubId, match_ids) {
   match_details <- data.frame(
@@ -28,96 +27,11 @@ getMatchDetailsForMatches <- function(clubId, match_ids) {
 
   i <- 1
   while(i <= length(match_ids)) {
-    details <- getMatchDetails(clubId, match_ids[i])
+    details <- .getMatchDetails(clubId, match_ids[i])
     match_details <- match_details %>% rbind(details)
     i <- i+1
   }
   return(match_details)
-}
-
-#' @description Collects the details of the specified team match into a tibble
-#' @param clubId ID of the club you want match details for
-#' @param match_id ID of the match you want details for
-#' @note Use `getMatchDetailsForMatches` if details for multiple matches are needed. It will automatically bind them all into a single tibble
-#' @return Tibble of match data
-#' @seealso `getMatchDetailsForMatches`
-#' @export
-getMatchDetails <- function(clubId, match_id) {
-  empty_tibble <- tibble(
-    username = character(),
-    played_as_white = character(),
-    played_as_black = character(),
-    board = character(),
-    time_out_count = character()
-  )
-
-  baseUrl <- "https://api.chess.com/pub/match/"
-  endpoint <- paste0(baseUrl, match_id, sep = "", collapse = NULL)
-
-  match_details_raw <- try(fromJSON(toString(endpoint), flatten = TRUE))
-
-  team1 <- match_details_raw$teams$team1
-  team2 <- match_details_raw$teams$team2
-
-  found_matching_team <- FALSE
-
-  if(grepl(clubId, team1$`@id`, fixed=TRUE)) {
-    my_team <- team1
-    found_matching_team <- TRUE
-  }
-  if(grepl(clubId, team2$`@id`, fixed=TRUE)) {
-    my_team <- team2
-    found_matching_team <- TRUE
-  }
-
-  if(found_matching_team) {
-    # No players have registered yet, return an empty tibble
-    if(!"players" %in% names(my_team)) {
-      warning(paste0("Could not find players for team ", clubId, " for match ", match_id))
-      return(empty_tibble)
-    }
-
-    my_team_players <- my_team$players %>% as.data.frame()
-
-    if(all(dim(my_team_players)) == 0) {
-      warning(paste0("No players registered for team ", clubId, " for match ", match_id))
-      return(empty_tibble)
-    }
-
-    print(paste0("Getting details for match: ", match_id))
-
-    expected_col_names <- c("username", "stats", "timeout_percent", "status", "played_as_white", "played_as_black", "board")
-    missing_col <- setdiff(expected_col_names, names(my_team_players))
-    my_team_players[missing_col] <- "In progress"
-    my_team_players <- my_team_players[expected_col_names]
-
-    # Add column for timeout
-    my_team_players <- my_team_players %>%
-      mutate(time_out_count = if_else(played_as_white == "timeout", 1, 0, 0)) %>%
-      mutate(time_out_count = if_else(played_as_black == "timeout", time_out_count+1, time_out_count, time_out_count))
-
-    # Refactor results to be 0, 1, or 1/2
-    my_team_players <- my_team_players %>%
-      mutate(played_as_white = if_else(played_as_white %in% c("resigned", "checkmated", "timeout"), "0", played_as_white)) %>%
-      mutate(played_as_white = if_else(played_as_white == "win", "1", played_as_white)) %>%
-      mutate(played_as_white = if_else(is.na(played_as_white), "In progress", played_as_white)) %>%
-      mutate(played_as_white = if_else(!played_as_white %in% c("In progress", "0", "1"),"0.5", played_as_white)) %>%
-      mutate(played_as_black = if_else(played_as_black %in% c("resigned", "checkmated", "timeout"), "0", played_as_black)) %>%
-      mutate(played_as_black = if_else(played_as_black == "win", "1", played_as_black)) %>%
-      mutate(played_as_black = if_else(is.na(played_as_black), "In progress", played_as_black)) %>%
-      mutate(played_as_black = if_else(!played_as_black %in% c("In progress", "0", "1"),"0.5", played_as_black)) %>%
-      mutate(played_as_white = as.numeric(played_as_white)) %>%
-      mutate(played_as_black = as.numeric(played_as_black))
-
-    # Drop the link to player stats API and member status columns.
-    my_team_players <- my_team_players %>%
-      select(c(username, played_as_white, played_as_black, board, time_out_count))
-
-    } else {
-    my_team_players = empty_tibble
-    warning(paste0("Could not find team for ", clubId, " for match ", match_id))
-  }
-  return(my_team_players)
 }
 
 #' @description Retrieves IDs of matches for the given club
@@ -223,11 +137,11 @@ getAllClubMembers <- function(clubId) {
 #' @param clubId ID of the club you want the list of inactive members for
 #' @return Tibble of members who have not joined a match in 90 days along with the date they joined the club
 #' @export
-getInactiveMatchPlayers <- function(clubId, nDays = 90) { #TODO: Might consider using nDays and passing it down to the matchdetail getter
+getInactiveMatchPlayers <- function(clubId) {
   # Get all match Ids
   all_match_ids <- getMatchIds(clubId)
 
-  all_match_details_raw <- getMatchDetailsForMatches(clubId, all_match_ids)
+  all_match_details_raw <- .getMatchDetailsForMatches(clubId, all_match_ids)
 
   all_players_in_matches <- all_match_details_raw %>%
     select(username) %>%
@@ -331,6 +245,91 @@ convertCountryCode <- function(countryEndpoint) {
 ################################
 ### Private Helper Functions ###
 ################################
+
+#' @description Collects the details of the specified team match into a tibble
+#' @param clubId ID of the club you want match details for
+#' @param match_id ID of the match you want details for
+#' @note Use `getMatchDetailsForMatches` to fetch match details
+#' @return Tibble of match data
+#' @seealso `getMatchDetailsForMatches`
+#' @export
+.getMatchDetails <- function(clubId, match_id) {
+  empty_tibble <- tibble(
+    username = character(),
+    played_as_white = character(),
+    played_as_black = character(),
+    board = character(),
+    time_out_count = character()
+  )
+
+  baseUrl <- "https://api.chess.com/pub/match/"
+  endpoint <- paste0(baseUrl, match_id, sep = "", collapse = NULL)
+
+  match_details_raw <- try(fromJSON(toString(endpoint), flatten = TRUE))
+
+  team1 <- match_details_raw$teams$team1
+  team2 <- match_details_raw$teams$team2
+
+  found_matching_team <- FALSE
+
+  if(grepl(clubId, team1$`@id`, fixed=TRUE)) {
+    my_team <- team1
+    found_matching_team <- TRUE
+  }
+  if(grepl(clubId, team2$`@id`, fixed=TRUE)) {
+    my_team <- team2
+    found_matching_team <- TRUE
+  }
+
+  if(found_matching_team) {
+    # No players have registered yet, return an empty tibble
+    if(!"players" %in% names(my_team)) {
+      warning(paste0("Could not find players for team ", clubId, " for match ", match_id))
+      return(empty_tibble)
+    }
+
+    my_team_players <- my_team$players %>% as.data.frame()
+
+    if(all(dim(my_team_players)) == 0) {
+      warning(paste0("No players registered for team ", clubId, " for match ", match_id))
+      return(empty_tibble)
+    }
+
+    print(paste0("Getting details for match: ", match_id))
+
+    expected_col_names <- c("username", "stats", "timeout_percent", "status", "played_as_white", "played_as_black", "board")
+    missing_col <- setdiff(expected_col_names, names(my_team_players))
+    my_team_players[missing_col] <- "In progress"
+    my_team_players <- my_team_players[expected_col_names]
+
+    # Add column for timeout
+    my_team_players <- my_team_players %>%
+      mutate(time_out_count = if_else(played_as_white == "timeout", 1, 0, 0)) %>%
+      mutate(time_out_count = if_else(played_as_black == "timeout", time_out_count+1, time_out_count, time_out_count))
+
+    # Refactor results to be 0, 1, or 1/2
+    my_team_players <- my_team_players %>%
+      mutate(played_as_white = if_else(played_as_white %in% c("resigned", "checkmated", "timeout"), "0", played_as_white)) %>%
+      mutate(played_as_white = if_else(played_as_white == "win", "1", played_as_white)) %>%
+      mutate(played_as_white = if_else(is.na(played_as_white), "In progress", played_as_white)) %>%
+      mutate(played_as_white = if_else(!played_as_white %in% c("In progress", "0", "1"),"0.5", played_as_white)) %>%
+      mutate(played_as_black = if_else(played_as_black %in% c("resigned", "checkmated", "timeout"), "0", played_as_black)) %>%
+      mutate(played_as_black = if_else(played_as_black == "win", "1", played_as_black)) %>%
+      mutate(played_as_black = if_else(is.na(played_as_black), "In progress", played_as_black)) %>%
+      mutate(played_as_black = if_else(!played_as_black %in% c("In progress", "0", "1"),"0.5", played_as_black)) %>%
+      mutate(played_as_white = as.numeric(played_as_white)) %>%
+      mutate(played_as_black = as.numeric(played_as_black))
+
+    # Drop the link to player stats API and member status columns.
+    my_team_players <- my_team_players %>%
+      select(c(username, played_as_white, played_as_black, board, time_out_count))
+
+  } else {
+    my_team_players = empty_tibble
+    warning(paste0("Could not find team for ", clubId, " for match ", match_id))
+  }
+  return(my_team_players)
+}
 
 # Checks the data frame for the provided columns.If they do not exist, they're added and filled with NA values.
 .add_cols <- function(df, cols) {
