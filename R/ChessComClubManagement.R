@@ -82,9 +82,17 @@ getMatchUrls <- function(clubId, include_finished = TRUE, include_in_progress = 
 
   finished_from_days_ago <- club_matches_raw$finished %>% filter(start_time > days_ago)
 
-  finished_matches <- finished_from_days_ago$`@id` %>% as.list()
-  upcoming_matches <- club_matches_raw$registered$`@id` %>% as.list()
-  in_progress_matches <- club_matches_raw$in_progress$`@id` %>% as.list()
+  finished_matches <- finished_from_days_ago %>%
+    filter(time_class == "daily")
+  finished_matches <- finished_matches$`@id` %>% as.list()
+
+  upcoming_matches <- club_matches_raw$registered %>%
+    filter(time_class == "daily")
+  upcoming_matches <- upcoming_matches$`@id` %>% as.list()
+
+  in_progress_matches <- club_matches_raw$in_progress %>%
+    filter(time_class == "daily")
+  in_progress_matches <- in_progress_matches$`@id` %>% as.list()
 
   if(include_finished) {
     matches <- append(matches, finished_matches)
@@ -122,7 +130,6 @@ getAllMembersByActivity <- function(clubId) {
 #' @param clubId ID of the club you want the members of
 #' @return A Tibble of all members in the club and their join date
 #' @export
-#' @
 getAllClubMembers <- function(clubId) {
   all_members_by_activity <- getAllMembersByActivity(clubId)
   weekly_members <- all_members_by_activity$weekly
@@ -284,7 +291,13 @@ convertCountryCode <- function(countryEndpoint) {
   baseUrl <- "https://api.chess.com/pub/match/"
   endpoint <- paste0(baseUrl, match_id, sep = "", collapse = NULL)
 
-  match_details_raw <- try(fromJSON(toString(endpoint), flatten = TRUE))
+  match_details_raw <- try(fromJSON(toString(endpoint), flatten = TRUE), silent = TRUE)
+
+  # Sometimes aborted matches are included from the API. Ignore these.
+  if(class(match_details_raw) == "try-error") {
+    warning(paste0("Match ", match_id, " cannot be found"))
+    return(empty_tibble)
+  }
 
   team1 <- match_details_raw$teams$team1
   team2 <- match_details_raw$teams$team2
