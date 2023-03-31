@@ -31,6 +31,7 @@ getMatchDetailsForMatches <- function(clubId, match_ids) {
     match_details <- match_details %>% rbind(details)
     i <- i+1
   }
+  print(paste0("Finished fetching details for ", length(match_details), " matches"))
   return(match_details)
 }
 
@@ -55,6 +56,7 @@ getMatchIds <- function(clubId, include_finished = TRUE, include_in_progress = T
     match_ids[i-1] <- match_id
     i <- i+1
   }
+  print(paste0("Finished fetching ", length(match_ids), " matches"))
   return(match_ids)
 }
 
@@ -127,6 +129,18 @@ getAllClubMembers <- function(clubId) {
   monthly_members <- all_members_by_activity$monthly
   all_time_members <- all_members_by_activity$all_time
 
+  weekly_members <- weekly_members %>%
+    mutate(activity = "Past week") %>%
+    rename(joined_club = joined)
+
+  monthly_members <- monthly_members %>%
+    mutate(activity = "Past month") %>%
+    rename(joined_club = joined)
+
+  all_time_members <- all_time_members %>%
+    mutate(activity = "Inactive") %>%
+    rename(joined_club = joined)
+
   all_club_members <- rbind(weekly_members, monthly_members, all_time_members) %>%
     as.data.frame()
 
@@ -141,7 +155,7 @@ getInactiveMatchPlayers <- function(clubId) {
   # Get all match Ids
   all_match_ids <- getMatchIds(clubId)
 
-  all_match_details_raw <- .getMatchDetailsForMatches(clubId, all_match_ids)
+  all_match_details_raw <- getMatchDetailsForMatches(clubId, all_match_ids)
 
   all_players_in_matches <- all_match_details_raw %>%
     select(username) %>%
@@ -163,8 +177,6 @@ getInactiveMatchPlayers <- function(clubId) {
 #' Username, joined chess.com date, last online date, country, daily standard and 960 ratings, time per move, and timeout percent
 #' @export
 getUserStats <- function(userId) {
-  print(paste0("Fetching stats for user: ", userId))
-
   baseUrl <- "https://api.chess.com/pub/player/"
   endpoint <- paste0(baseUrl, userId, sep = "", collapse = NULL)
   user_profile <- try(fromJSON(toString(endpoint), flatten = TRUE)) # raw data of member activity (username, join date)
@@ -174,7 +186,7 @@ getUserStats <- function(userId) {
   endpoint <- paste0(baseUrl, userId, "/stats", sep = "", collapse = NULL)
   user_stats_raw <- try(fromJSON(toString(endpoint), simplifyVector = TRUE, simplifyDataFrame = TRUE, flatten = TRUE))
 
-  user_stats_unlisted <- unlist(user_stats_raw ,use.names = TRUE)
+  user_stats_unlisted <- unlist(user_stats_raw , use.names = TRUE)
 
   user_stats <- as.data.frame(t(user_stats_unlisted))
   seconds_in_hour <- 60*60
@@ -193,7 +205,8 @@ getUserStats <- function(userId) {
     rename(timeout_percent = chess_daily.record.timeout_percent) %>%
     mutate(time_per_move = time_per_move/(seconds_in_hour)) %>%
     inner_join(user_profile, by = "username") %>%
-    select(username, url, joined, last_online, country, daily_rating, daily_960_rating, time_per_move, timeout_percent)
+    rename(joined_site = joined) %>%
+    select(username, url, joined_site, last_online, country, daily_rating, daily_960_rating, time_per_move, timeout_percent)
 
   return(user_clean_stats)
 }
@@ -207,13 +220,15 @@ getAllMemberStats <- function(clubId) {
   user_details <- data.frame(
     username = character(),
     url = character(),
-    joined = numeric(),
+    joined_club = numeric(),
+    joined_site = numeric(),
     last_online = numeric(),
     country = character(),
     daily_rating  = numeric(),
     daily_960_rating  = numeric(),
     time_per_move  = numeric(),
-    timeout_percent = numeric()
+    timeout_percent = numeric(),
+    activity = character()
   )
 
   all_members <- getAllClubMembers(clubId)
@@ -221,12 +236,16 @@ getAllMemberStats <- function(clubId) {
 
   i <- 1
   while(i <= length(user_ids)) {
+    print(paste0(i, "/", length(user_ids), ": Fetching stats for user: ", user_ids[i]))
     details <- getUserStats(user_ids[i])
-    user_ids[i]
-    details
     user_details <- user_details %>% rbind(details)
     i <- i+1
   }
+
+  user_details <- user_details %>%
+    inner_join(all_members, by = "username") %>%
+    select(username, url, joined_club, joined_site, last_online, activity, country, daily_rating, daily_960_rating, time_per_move, timeout_percent)
+
   return(user_details)
 }
 
