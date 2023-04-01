@@ -43,8 +43,8 @@ getMatchDetailsForMatches <- function(clubId, match_ids) {
 #' @param include_upcoming Returns upcoming match IDs
 #' @return List of match IDs
 #' @export
-getMatchIds <- function(clubId, include_finished = TRUE, include_in_progress = TRUE, include_upcoming = TRUE) {
-  all_matches <- getMatchUrls(clubId, include_finished, include_in_progress, include_upcoming)
+getMatchIds <- function(clubId, include_finished = TRUE, include_in_progress = TRUE, include_upcoming = TRUE, nDays = NA) {
+  all_matches <- getMatchUrls(clubId, include_finished, include_in_progress, include_upcoming, nDays)
 
   match_ids <- vector(mode="character", length = length(all_matches)-2)
 
@@ -69,43 +69,50 @@ getMatchIds <- function(clubId, include_finished = TRUE, include_in_progress = T
 #' @param include_upcoming Returns upcoming match URLs
 #' @return List of match URLs
 #' @export
-getMatchUrls <- function(clubId, include_finished = TRUE, include_in_progress = TRUE, include_upcoming = TRUE) {
-  print("Fetching team match URLs from the past 90 days")
+getMatchUrls <- function(clubId, include_finished = TRUE, include_in_progress = TRUE, include_upcoming = TRUE, nDays = NA) {
+  message <- ifelse(is.na(nDays), "all time", paste0("the past ", nDays, " days"))
+  print(paste0("Fetching team match URLs from ", message))
   baseUrl <- "https://api.chess.com/pub/club/"
   endpoint <- paste0(baseUrl, clubId, "/matches", sep = "", collapse = NULL)
 
   club_matches_raw <- try(fromJSON(toString(endpoint), flatten = TRUE))
 
-#  current_time <- as.numeric(as.POSIXct(Sys.time()))
-#  one_day <- 86400
-
-#  days_ago <- current_time - 90*one_day
-
-#  finished_from_days_ago <- club_matches_raw$finished %>% filter(start_time > days_ago)
-
-  finished_matches <- club_matches_raw$finished %>%
-    filter(time_class == "daily")
-  finished_matches <- finished_matches$`@id` %>% as.list()
-
-  upcoming_matches <- club_matches_raw$registered %>%
-    filter(time_class == "daily")
-  upcoming_matches <- upcoming_matches$`@id` %>% as.list()
-
-  in_progress_matches <- club_matches_raw$in_progress %>%
-    filter(time_class == "daily")
-  in_progress_matches <- in_progress_matches$`@id` %>% as.list()
-
   if(include_finished) {
-    matches <- append(matches, finished_matches)
     print("Including finished matches...")
+
+    if(!is.na(nDays)) {
+      current_time <- as.numeric(as.POSIXct(Sys.time()))
+      one_day <- 86400
+      days_ago <- current_time - nDays*one_day
+
+      finished_matches <- club_matches_raw$finished %>% filter(start_time > days_ago)
+    } else {
+      finished_matches <- club_matches_raw$finished
+    }
+
+    finished_matches <- finished_matches %>%
+      filter(time_class == "daily")
+    finished_matches <- finished_matches$`@id` %>% as.list()
+
+    matches <- append(matches, finished_matches)
   }
   if(include_upcoming) {
-    matches <- append(matches, upcoming_matches)
     print("Including upcoming matches...")
+
+    upcoming_matches <- club_matches_raw$registered %>%
+      filter(time_class == "daily")
+    upcoming_matches <- upcoming_matches$`@id` %>% as.list()
+
+    matches <- append(matches, upcoming_matches)
   }
   if(include_in_progress) {
-    matches <- append(matches, in_progress_matches)
     print("Including in-progress matches...")
+
+    in_progress_matches <- club_matches_raw$in_progress %>%
+      filter(time_class == "daily")
+    in_progress_matches <- in_progress_matches$`@id` %>% as.list()
+
+    matches <- append(matches, in_progress_matches)
   }
   return(matches)
 }
