@@ -120,6 +120,7 @@ getMatchUrls <- function(clubId, include_finished = TRUE, include_in_progress = 
 #' @description Retrieves the all time stats from team matches and creates a leader board
 #' @param clubId ID of the club you want the leader board for
 #' @return A Tibble of club members who have participated in matches and their all-time records
+#' @note Chess.com public API only returns the most recent 500 completed matches due to performance issues. Until that is resolved by the chess.com team, this function may NOT return the all-time stats and results may not be accurate for all clubs.
 #' @export
 getAllTimeLeaderBoard <- function(clubId) {
 
