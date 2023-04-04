@@ -138,7 +138,6 @@ getAllTimeLeaderBoard <- function(clubId) {
     mutate(draws = if_else(played_as_black == .5, draws+1, draws, draws)) %>%
     mutate(losses = if_else(played_as_white == 0, 1, 0, 0)) %>%
     mutate(losses = if_else(played_as_black == 0, losses+1, losses, losses)) %>%
-    mutate(W_D_L = paste0(wins, "-", draws, "-", losses)) %>%
     mutate(played_as_white = if_else(is.na(played_as_white), 0, played_as_white)) %>%
     mutate(played_as_black = if_else(is.na(played_as_black), 0, played_as_black)) %>%
     group_by(username) %>%
@@ -147,7 +146,6 @@ getAllTimeLeaderBoard <- function(clubId) {
       wins = sum(wins),
       draws = sum(draws),
       losses = sum(losses),
-      W_D_L = paste0(wins, "-", draws, "-", losses)
     )
   return(all_time_match_results)
 }
