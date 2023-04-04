@@ -143,6 +143,7 @@ getAllTimeLeaderBoard <- function(clubId) {
     group_by(username) %>%
     summarise(
       total_points = sum(wins) + (sum(draws)/2),
+      total_matches_entered = n(),
       wins = sum(wins),
       draws = sum(draws),
       losses = sum(losses),
