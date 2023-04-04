@@ -8,7 +8,7 @@ Description: Retrieve cleaned data for any chess.com club.
     - Retrieve member details
     - Retrieve team match details
     - Retrieve all time team match leaderboard
-Warning: Due to the chess.com public API temporarily only returning the most recent 500 completed team matches, the leaderboard and stats returned for matches may not be accurate for all clubs. 
+notice: Due to the chess.com public API temporarily only returning the most recent 500 completed team matches, the leaderboard and stats returned for matches may not be accurate for all clubs. 
 License: MIT
 Encoding: UTF-8
 LazyData: true
