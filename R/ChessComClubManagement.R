@@ -129,7 +129,7 @@ getMatchUrls <- function(clubId, include_finished = TRUE, include_in_progress = 
 getAllTimeLeaderBoard <- function(clubId) {
 
   # Match IDs for all daily events
-  match_ids <- getMatchIds(clubId)
+  match_ids <- getMatchIds(clubId, include_finished = TRUE, include_in_progress = TRUE, include_upcoming = FALSE)
 
   all_time_match_results <- getMatchDetailsForMatches(clubId, match_ids) %>%
     mutate(wins = if_else(played_as_white == 1, 1, 0, 0)) %>%
