@@ -15,6 +15,7 @@ require(dplyr)
 #' @param clubId ID of the club you want matches details for
 #' @param match_ids List of IDs of the matches you want details for
 #' @return Tibble of all specified match data
+#' @source chess.com public API
 #' @export
 getMatchDetailsForMatches <- function(clubId, match_ids) {
   match_details <- data.frame(
@@ -27,11 +28,12 @@ getMatchDetailsForMatches <- function(clubId, match_ids) {
 
   i <- 1
   while(i <= length(match_ids)) {
+    print(paste0(i, "/", length(match_ids), ": Fetching match: ", match_ids[i]))
     details <- .getMatchDetails(clubId, match_ids[i])
     match_details <- match_details %>% rbind(details)
     i <- i+1
   }
-  print(paste0("Finished fetching details for ", length(match_details), " matches"))
+  print(paste("Finished fetching details for", length(match_ids), "matches"))
   return(match_details)
 }
 
@@ -41,6 +43,7 @@ getMatchDetailsForMatches <- function(clubId, match_ids) {
 #' @param include_in_progress Returns in-progress match IDs
 #' @param include_upcoming Returns upcoming match IDs
 #' @return List of match IDs
+#' @source chess.com public API
 #' @export
 getMatchIds <- function(clubId, include_finished = TRUE, include_in_progress = TRUE, include_upcoming = TRUE, nDays = NA) {
   all_matches <- getMatchUrls(clubId, include_finished, include_in_progress, include_upcoming, nDays)
@@ -56,7 +59,7 @@ getMatchIds <- function(clubId, include_finished = TRUE, include_in_progress = T
     match_ids[i-1] <- match_id
     i <- i+1
   }
-  print(paste0("Finished fetching ", length(match_ids), " matches"))
+  print(paste("Finished fetching", length(match_ids), "matches"))
   return(match_ids)
 }
 
@@ -67,6 +70,7 @@ getMatchIds <- function(clubId, include_finished = TRUE, include_in_progress = T
 #' @param include_in_progress Returns in-progress match URLs
 #' @param include_upcoming Returns upcoming match URLs
 #' @return List of match URLs
+#' @source chess.com public API
 #' @export
 getMatchUrls <- function(clubId, include_finished = TRUE, include_in_progress = TRUE, include_upcoming = TRUE, nDays = NA) {
   message <- ifelse(is.na(nDays), "all time", paste0("the past ", nDays, " days"))
@@ -116,6 +120,38 @@ getMatchUrls <- function(clubId, include_finished = TRUE, include_in_progress = 
   return(matches)
 }
 
+#' @description Retrieves the all time stats from team matches and creates a leader board
+#' @param clubId ID of the club you want the leader board for
+#' @return A Tibble of club members who have participated in matches and their all-time records
+#' @note Chess.com public API only returns the most recent 500 completed matches due to performance issues. Until that is resolved by the chess.com team, this function may NOT return the all-time stats and results may not be accurate for all clubs.
+#' @source chess.com public API
+#' @export
+getAllTimeLeaderBoard <- function(clubId) {
+
+  # Match IDs for all daily events
+  match_ids <- getMatchIds(clubId, include_finished = TRUE, include_in_progress = TRUE, include_upcoming = FALSE)
+
+  all_time_match_results <- getMatchDetailsForMatches(clubId, match_ids) %>%
+    mutate(wins = if_else(played_as_white == 1, 1, 0, 0)) %>%
+    mutate(wins = if_else(played_as_black == 1, wins+1, wins, wins)) %>%
+    mutate(draws = if_else(played_as_white == .5, 1, 0, 0)) %>%
+    mutate(draws = if_else(played_as_black == .5, draws+1, draws, draws)) %>%
+    mutate(losses = if_else(played_as_white == 0, 1, 0, 0)) %>%
+    mutate(losses = if_else(played_as_black == 0, losses+1, losses, losses)) %>%
+    mutate(played_as_white = if_else(is.na(played_as_white), 0, played_as_white)) %>%
+    mutate(played_as_black = if_else(is.na(played_as_black), 0, played_as_black)) %>%
+    group_by(username) %>%
+    summarise(
+      games = sum(wins) + sum(draws) + sum(losses),
+      score = sum(wins) + (sum(draws)/2),
+      wins = sum(wins),
+      draws = sum(draws),
+      losses = sum(losses)
+    )
+
+  return(all_time_match_results)
+}
+
 ##########################
 ### MEMEBER MANAGEMENT ###
 ##########################
@@ -124,9 +160,10 @@ getMatchUrls <- function(clubId, include_finished = TRUE, include_in_progress = 
 #' @param clubId ID of the club you want the list of members for
 #' @return A list of members grouped by activity level (weekly, monthly,  all-time (inactive))
 #' @seealso `getAllClubMembers` which returns the same data already merged into one table
+#' @source chess.com public API
 #' @export
 getAllMembersByActivity <- function(clubId) {
-  print(paste0("Fetching members for club: ", clubId))
+  print(paste("Fetching members for club:", clubId))
   baseUrl <- "https://api.chess.com/pub/club/"
   endpoint <- paste0(baseUrl, clubId, "/members", sep = "", collapse = NULL)
   member_activity_raw <- try(fromJSON(toString(endpoint), flatten = TRUE))
@@ -136,6 +173,7 @@ getAllMembersByActivity <- function(clubId) {
 #' @description Retrieves all members of a given club
 #' @param clubId ID of the club you want the members of
 #' @return A Tibble of all members in the club and their join date
+#' @source chess.com public API
 #' @export
 getAllClubMembers <- function(clubId) {
   all_members_by_activity <- getAllMembersByActivity(clubId)
@@ -164,6 +202,7 @@ getAllClubMembers <- function(clubId) {
 #' @description Calculates which members have not joined a team match in the past 90 days
 #' @param clubId ID of the club you want the list of inactive members for
 #' @return Tibble of members who have not joined a match in 90 days along with the date they joined the club
+#' @source chess.com public API
 #' @export
 getInactiveMatchPlayers <- function(clubId) {
   # Get all match Ids
@@ -187,8 +226,8 @@ getInactiveMatchPlayers <- function(clubId) {
 
 #' @description Returns relevant stats for a user
 #' @param userId ID of the user you want stats for
-#' @return One row tibble of relevant user stats for club management:
-#' Username, joined chess.com date, last online date, country, daily standard and 960 ratings, time per move, and timeout percent
+#' @return One row tibble of relevant user stats for club management: Username, joined chess.com date, last online date, country, daily standard and 960 ratings, time per move, and timeout percent
+#' @source chess.com public API
 #' @export
 getUserStats <- function(userId) {
   baseUrl <- "https://api.chess.com/pub/player/"
@@ -227,8 +266,8 @@ getUserStats <- function(userId) {
 
 #' @description Returns relevant stats for all club members
 #' @param userId ID of the club you want stats for
-#' @return Tibble of relevant user stats for club management:
-#' Username, joined chess.com date, last online date, country, daily standard and 960 ratings, time per move, and timeout percent
+#' @return Tibble of relevant user stats for club management: Username, joined chess.com date, last online date, country, daily standard and 960 ratings, time per move, and timeout percent
+#' @source chess.com public API
 #' @export
 getAllMemberStats <- function(clubId) {
   user_details <- data.frame(
@@ -266,6 +305,7 @@ getAllMemberStats <- function(clubId) {
 #' @description Calls the chess.com country API to get the country name. Provided only for convenience since all returns by default will not convert the country
 #' @param countryEndpoint the URL for the chess.com country API
 #' @return The name of the country
+#' @source chess.com public API
 #' @export
 convertCountryCode <- function(countryEndpoint) {
   if(is.na(countryEndpoint)) {
@@ -285,7 +325,6 @@ convertCountryCode <- function(countryEndpoint) {
 #' @note Use `getMatchDetailsForMatches` to fetch match details
 #' @return Tibble of match data
 #' @seealso `getMatchDetailsForMatches`
-#' @export
 .getMatchDetails <- function(clubId, match_id) {
   empty_tibble <- tibble(
     username = character(),
@@ -302,7 +341,7 @@ convertCountryCode <- function(countryEndpoint) {
 
   # Sometimes aborted matches are included from the API. Ignore these.
   if(class(match_details_raw) == "try-error") {
-    warning(paste0("Match ", match_id, " cannot be found"))
+    warning(paste("Match", match_id, "cannot be found"))
     return(empty_tibble)
   }
 
@@ -323,18 +362,16 @@ convertCountryCode <- function(countryEndpoint) {
   if(found_matching_team) {
     # No players have registered yet, return an empty tibble
     if(!"players" %in% names(my_team)) {
-      warning(paste0("Could not find players for team ", clubId, " for match ", match_id))
+      warning(paste("Could not find players for team", clubId, "for match", match_id))
       return(empty_tibble)
     }
 
     my_team_players <- my_team$players %>% as.data.frame()
 
     if(all(dim(my_team_players)) == 0) {
-      warning(paste0("No players registered for team ", clubId, " for match ", match_id))
+      warning(paste("No players registered for team", clubId, "for match", match_id))
       return(empty_tibble)
     }
-
-    print(paste0("Getting details for match: ", match_id))
 
     expected_col_names <- c("username", "stats", "timeout_percent", "status", "played_as_white", "played_as_black", "board")
     missing_col <- setdiff(expected_col_names, names(my_team_players))
@@ -365,7 +402,7 @@ convertCountryCode <- function(countryEndpoint) {
 
   } else {
     my_team_players = empty_tibble
-    warning(paste0("Could not find team for ", clubId, " for match ", match_id))
+    warning(paste("Could not find team for", clubId, "for match", match_id))
   }
   return(my_team_players)
 }
