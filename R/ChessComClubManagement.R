@@ -142,12 +142,13 @@ getAllTimeLeaderBoard <- function(clubId) {
     mutate(played_as_black = if_else(is.na(played_as_black), 0, played_as_black)) %>%
     group_by(username) %>%
     summarise(
-      total_points = sum(wins) + (sum(draws)/2),
-      total_matches_entered = n(),
+      games = sum(wins) + sum(draws) + sum(losses),
+      score = sum(wins) + (sum(draws)/2),
       wins = sum(wins),
       draws = sum(draws),
-      losses = sum(losses),
+      losses = sum(losses)
     )
+
   return(all_time_match_results)
 }
 
