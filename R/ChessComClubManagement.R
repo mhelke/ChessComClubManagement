@@ -54,7 +54,6 @@ getMatchIds <- function(clubId, include_finished = TRUE, include_in_progress = T
   while(i < length(all_matches)) {
     match <- all_matches[[i]]
     url_elements <- match %>% str_split_1('/')
-    url_elements
     match_id <- url_elements %>% last()
     match_ids[i-1] <- match_id
     i <- i+1
@@ -150,6 +149,43 @@ getAllTimeLeaderBoard <- function(clubId) {
     )
 
   return(all_time_match_results)
+}
+
+#' @description Retrieves the record of the given club against all clubs played in team matches
+#' @param clubId ID of the club you want the results for
+#' @return A Tibble of the club's team match record versus other clubs
+#' @note Chess.com public API only returns the most recent 500 completed matches due to performance issues. Until that is resolved by the chess.com team, this function may NOT return all the clubs ever played.
+#' @source chess.com public API
+#' @export
+getMatchResults <- function(clubId) {
+  baseUrl <- "https://api.chess.com/pub/club/"
+  endpoint <- paste0(baseUrl, clubId, "/matches", sep = "", collapse = NULL)
+
+  matches_raw <- try(fromJSON(toString(endpoint), flatten = TRUE), silent = TRUE)
+
+  # Sometimes aborted matches are included from the API. Ignore these.
+  if(class(matches_raw) == "try-error") {
+    stop("Error: matches cannot be found")
+  }
+
+  matches <- matches_raw$finished %>%
+    filter(time_class == "daily") %>%
+    select(opponent, result) %>%
+    mutate(opponent = sapply(opponent, .getId)) %>%
+    mutate(wins = if_else(result == "win", 1, 0)) %>%
+    mutate(draws = if_else(result == "draw", 1, 0)) %>%
+    mutate(losses = if_else(result == "lose", 1, 0)) %>%
+    group_by(opponent) %>%
+    summarise(
+      matches_played = n(),
+      wins = sum(wins),
+      draws = sum(draws),
+      losses = sum(losses)
+    ) %>%
+    arrange(desc(matches_played))
+
+  return(matches)
+
 }
 
 ##########################
@@ -412,4 +448,10 @@ convertCountryCode <- function(countryEndpoint) {
   add <- cols[!cols %in% names(df)]
   if(length(add) != 0) df[add] <- NA
   return(df)
+}
+
+.getId <- function(url) {
+  url_elements <- url %>% str_split_1('/')
+  id <- url_elements %>% last()
+  return(id)
 }
