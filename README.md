@@ -2,7 +2,9 @@
 
 ## Overview
 
-ChessComClubManagement is a convenient package that can fetch useful information on your club to help you better manage members. All you need to know is the club ID and soon you'll have all the useful stats you need for effective data processing. Member information includes:
+ChessComClubManagement is a convenient package that can fetch useful information on your club to help you better manage members. All you need to know is the club ID and soon you'll have all the useful stats you need for effective data processing. 
+
+#### Member Information:
   * Username and link to their profile
   * Date user joined the club
   * Date user joined the site
@@ -16,6 +18,21 @@ ChessComClubManagement is a convenient package that can fetch useful information
   * Total wins in matches for the club
   * Activity status within the club
 
+#### Team Match Leaderboard
+  * Username and link to their profile
+  * Total games the user has played for the club
+  * Total score the user has achieved
+  * Total match wins
+  * Total match draws
+  * Total match losses
+  
+#### Match Results
+  * Opponent name
+  * Number of matches played against the opponent
+  * Total wins 
+  * Total draws
+  * Total losses
+  
 ## How to install
 
 #### Option 1: Download the release
