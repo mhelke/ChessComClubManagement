@@ -79,6 +79,10 @@ getMatchUrls <- function(clubId, include_finished = TRUE, include_in_progress = 
 
   club_matches_raw <- try(fromJSON(toString(endpoint), flatten = TRUE))
 
+  if(class(club_matches_raw) == "try-error") {
+    stop("Error: matches cannot be found")
+  }
+
   if(include_finished) {
     print("Including finished matches...")
 
@@ -203,6 +207,11 @@ getAllMembersByActivity <- function(clubId) {
   baseUrl <- "https://api.chess.com/pub/club/"
   endpoint <- paste0(baseUrl, clubId, "/members", sep = "", collapse = NULL)
   member_activity_raw <- try(fromJSON(toString(endpoint), flatten = TRUE))
+
+  if(class(member_activity_raw) == "try-error") {
+    stop("Error: members cannot be found")
+  }
+
   return(member_activity_raw)
 }
 
@@ -225,6 +234,7 @@ getAllClubMembers <- function(clubId) {
     mutate(activity = "Past month") %>%
     rename(joined_club = joined)
 
+  # "all_time" is the term used by the API for "inactive"
   all_time_members <- all_time_members %>%
     mutate(activity = "Inactive") %>%
     rename(joined_club = joined)
@@ -269,11 +279,20 @@ getUserStats <- function(userId) {
   baseUrl <- "https://api.chess.com/pub/player/"
   endpoint <- paste0(baseUrl, userId, sep = "", collapse = NULL)
   user_profile <- try(fromJSON(toString(endpoint), flatten = TRUE)) # raw data of member activity (username, join date)
+
+  if(class(user_profile) == "try-error") {
+    stop(paste("Error: user ", userId, " cannot be found", sep = "", collapse = NULL))
+  }
+
   user_profile <- as.data.frame(user_profile)
 
   baseUrl <- "https://api.chess.com/pub/player/"
   endpoint <- paste0(baseUrl, userId, "/stats", sep = "", collapse = NULL)
   user_stats_raw <- try(fromJSON(toString(endpoint), simplifyVector = TRUE, simplifyDataFrame = TRUE, flatten = TRUE))
+
+  if(class(user_stats_raw) == "try-error") {
+    stop(paste("Error: stats for user ", userId, " cannot be found", sep = "", collapse = NULL))
+  }
 
   user_stats_unlisted <- unlist(user_stats_raw , use.names = TRUE)
 
@@ -348,6 +367,10 @@ convertCountryCode <- function(countryEndpoint) {
     return(NA)
   }
   country_info <- try(fromJSON(toString(countryEndpoint), flatten = TRUE)) # raw data of member activity (username, join date)
+  if(class(country_info) == "try-error") {
+    warning("Failed to fetch country")
+    return(NA)
+  }
   return(country_info$name)
 }
 
