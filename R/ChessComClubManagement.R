@@ -396,7 +396,7 @@ convertCountryCode <- function(countryEndpoint) {
 #' @param min_games The minimum number of games that must be completed before joining
 #' @param min_months_account_age The minimum age of the user's account
 #' @param min_days_last_online The number of days ago since the user was last online
-#' @param country The country on the user's profile
+#' @param country The country code on the user's profile. Each country has a 2 character code assigned by chess.com
 #' @return Data frame of ideal players within a given club
 #' @export
 getUsersToInvite <- function(club_id,
@@ -407,42 +407,84 @@ getUsersToInvite <- function(club_id,
                              min_days_last_online = NA,
                              country_code = NA) {
 
+  # Verify given data is accurate
+  if (nchar(country_code) != 2 & !is.na(country_code)) {
+   stop(paste0("Invalid country code: ", country_code, ". Please find the correct country code here:
+               https://www.chess.com/news/view/published-data-api#pubapi-endpoint-country"))
+  }
+
   # Fetch club members
   invites <- getAllMemberStats(club_id)
 
-  # SAVE_THIS <- invites
-  invites <- SAVE_THIS
-  SAVE_THIS <- invites
-
+  # Process the dates needed for calculations
   invites <- invites %>%
     mutate(last_online = as.POSIXct(last_online, origin = "1970-01-01", tz = "UTC")) %>%
     mutate(joined_site = as.POSIXct(joined_site, origin = "1970-01-01", tz = "UTC"))
+
   # Get a list of users who meet the criteria
 
+  # Timeouts
   if(!is.na(max_timeout)) {
+    start <- count(invites)
     invites <- invites %>%
       filter(timeout_percent <= max_timeout)
+
+    change <- start - count(invites)
+    print(paste0("Dropped ", change, " players on max timeout requirement of ", max_timeout))
   }
 
+  # Move speed
   if(!is.na(max_move_speed)) {
+    start <- count(invites)
     invites <- invites %>%
-      filter(time_per_move <= max_timeout)
+      filter(time_per_move <= max_move_speed)
+
+    change <- start - count(invites)
+    print(paste0("Dropped ", change, " players on max move speed requirement of ", max_move_speed))
   }
 
+  # Last online date
   if(!is.na(min_days_last_online)) {
+    start <- count(invites)
     invites <- invites %>%
       filter(last_online >= ymd(Sys.Date()) - days(min_days_last_online))
+
+    change <- start - count(invites)
+    print(paste0("Dropped ", change, " players on min days last online requirement of ", min_days_last_online, " days"))
   }
 
+  # Country code
   if(!is.na(country_code)) {
+    start <- count(invites)
     invites <- invites %>%
       filter(grepl(country_code, str_sub(country, -2, -1), ignore.case = TRUE))
+
+    change <- start - count(invites)
+    print(paste0("Dropped ", change, " players on country requirement of ", country_code))
   }
 
+  # Completed games
+  start <- count(invites)
   invites <- invites %>%
-    filter(total_games >= min_games) %>%
+    filter(total_games >= min_games)
+
+  change <- start - count(invites)
+  print(paste0("Dropped ", change, " players on minimum games played requirement of ", min_games))
+
+  # Account age
+  start <- count(invites)
+  invites <- invites %>%
     filter(joined_site <= ymd(Sys.Date()) - months(min_months_account_age))
 
+  change <- start - count(invites)
+  print(paste0("Dropped ", change, " players on account age requirement of ", min_months_account_age, " months"))
+
+  final_count <- count(invites)
+  if(final_count == 0) {
+    warning("No players meet the given criteria!")
+  } else {
+    print(paste0("Returning ", final_count, " players that meet the given criteria"))
+  }
   return(invites)
 }
 
