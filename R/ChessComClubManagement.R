@@ -271,27 +271,27 @@ getInactiveMatchPlayers <- function(club_id) {
 }
 
 #' @description Returns relevant stats for a user
-#' @param userId ID of the user you want stats for
+#' @param user_id ID of the user you want stats for
 #' @return One row tibble of relevant user stats for club management: Username, joined chess.com date, last online date, country, daily standard and 960 ratings, time per move, and timeout percent
 #' @source chess.com public API
 #' @export
-getUserStats <- function(userId) {
+getUserStats <- function(user_id) {
   baseUrl <- "https://api.chess.com/pub/player/"
-  endpoint <- paste0(baseUrl, userId, sep = "", collapse = NULL)
+  endpoint <- paste0(baseUrl, user_id, sep = "", collapse = NULL)
   user_profile <- try(fromJSON(toString(endpoint), flatten = TRUE)) # raw data of member activity (username, join date)
 
   if(class(user_profile) == "try-error") {
-    stop(paste("Error: user ", userId, " cannot be found", sep = "", collapse = NULL))
+    stop(paste("Error: user ", user_id, " cannot be found", sep = "", collapse = NULL))
   }
 
   user_profile <- as.data.frame(user_profile)
 
   baseUrl <- "https://api.chess.com/pub/player/"
-  endpoint <- paste0(baseUrl, userId, "/stats", sep = "", collapse = NULL)
+  endpoint <- paste0(baseUrl, user_id, "/stats", sep = "", collapse = NULL)
   user_stats_raw <- try(fromJSON(toString(endpoint), simplifyVector = TRUE, simplifyDataFrame = TRUE, flatten = TRUE))
 
   if(class(user_stats_raw) == "try-error") {
-    stop(paste("Error: stats for user ", userId, " cannot be found", sep = "", collapse = NULL))
+    stop(paste("Error: stats for user ", user_id, " cannot be found", sep = "", collapse = NULL))
   }
 
   user_stats_unlisted <- unlist(user_stats_raw , use.names = TRUE)
@@ -313,7 +313,7 @@ getUserStats <- function(userId) {
   user_clean_stats <- user_stats %>%
     select(chess_daily.last.rating, chess960_daily.last.rating, chess_daily.record.time_per_move, chess_daily.record.timeout_percent,
            chess_daily.record.win, chess_daily.record.loss, chess_daily.record.draw) %>%
-    mutate(username = userId) %>%
+    mutate(username = user_id) %>%
     mutate(across(c(chess_daily.last.rating, chess960_daily.last.rating, chess_daily.record.time_per_move, chess_daily.record.timeout_percent,
                     chess_daily.record.win, chess_daily.record.loss, chess_daily.record.draw), as.numeric)) %>%
     rename(daily_rating = chess_daily.last.rating) %>%
@@ -330,7 +330,7 @@ getUserStats <- function(userId) {
 }
 
 #' @description Returns relevant stats for all club members
-#' @param userId ID of the club you want stats for
+#' @param user_id ID of the club you want stats for
 #' @return Tibble of relevant user stats for club management: Username, joined chess.com date, last online date, country, daily standard and 960 ratings, time per move, and timeout percent
 #' @source chess.com public API
 #' @export

@@ -2,11 +2,11 @@
 \alias{getUserStats}
 \title{Get Stats for a Given User}
 \usage{
-getUserStats(userId)
+getUserStats(user_id)
 }
 \description{
 Fetches relevant stats for a given user ID.
 }
 \examples{
-getUserStats(userId = "MyUsername")
+getUserStats(user_id = "MyUsername")
 }
