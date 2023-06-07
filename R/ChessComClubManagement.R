@@ -281,6 +281,11 @@ getPlayersToRemoveFromMatch <-
     )
 
     total_players <- length(players)
+
+    if (total_players == 0) {
+      stop(paste0("No players signed up for match ", match_id, " on team ", club_id))
+    }
+
     i <- 1
     for (player in players) {
       print(paste0(i, "/", total_players, " Fetching stats for ", player))
