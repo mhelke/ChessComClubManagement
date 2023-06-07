@@ -2,11 +2,11 @@
 \alias{getAllMemberStats}
 \title{Get Stats for all Users in the Given Club}
 \usage{
-getAllMemberStats(clubId)
+getAllMemberStats(club_id)
 }
 \description{
 Fetches relevant stats for all users in the given club.
 }
 \examples{
-getAllMemberStats(clubId = "my-club")
+getAllMemberStats(club_id = "my-club")
 }
