@@ -243,37 +243,58 @@ getMatchResults <- function(club_id) {
 
 }
 
+#' @description Retrieves players registered for a match that are ineligible to participate
+#' @param match_id ID of the match to manage
+#' @param club_id ID of the club you manage
+#' @param max_timeouts The maximum timeout percentage allowed for participation
+#' @param min_total_games The minimum number of completed games allowed for participation
+#' @return A list of players ineligible to participate in the match, filtered by the provided criteria
+#' @source chess.com public API
+#' @export
+getPlayersToRemoveFromMatch <-
+  function(match_id,
+           club_id,
+           max_timeouts,
+           min_total_games) {
 
-getPlayersToRemoveFromMatch <- function(match_id, club_id, max_timeouts, min_total_games) {
-  match_details <- getMatchDetailsForMatches(club_id, match_id)
+    if (is.na(match_id) | is.na(club_id) | is.na(max_timeouts) | is.na(min_total_games)) {
+      stop("Parameters cannot be NA")
+    }
 
-  players <- match_details$username
+    match_details <- getMatchDetailsForMatches(club_id, match_id)
 
-  user_details <- data.frame(
-    username = character(),
-    url = character(),
-    joined_club = numeric(),
-    joined_site = numeric(),
-    last_online = numeric(),
-    country = character(),
-    daily_rating  = numeric(),
-    daily_960_rating  = numeric(),
-    time_per_move  = numeric(),
-    timeout_percent = numeric(),
-    activity = character(),
-    total_games = numeric()
-  )
+    players <- match_details$username
 
-  total_players <- length(players)
-  for (player in players) {
-    print(paste0("Fetching ", i, "/", total_players))
-    stats <- getUserStats(user_id = players[i])
-    user_details <- user_details %>% rbind(stats)
+    user_details <- data.frame(
+      username = character(),
+      url = character(),
+      joined_club = numeric(),
+      joined_site = numeric(),
+      last_online = numeric(),
+      country = character(),
+      daily_rating  = numeric(),
+      daily_960_rating  = numeric(),
+      time_per_move  = numeric(),
+      timeout_percent = numeric(),
+      activity = character(),
+      total_games = numeric()
+    )
+
+    total_players <- length(players)
+    i <- 1
+    for (player in players) {
+      print(paste0(i, "/", total_players, " Fetching stats for ", player))
+      stats <- getUserStats(user_id = player)
+      user_details <- user_details %>% rbind(stats)
+      i <- i + 1
+    }
+
+    removals <- user_details %>%
+      filter(timeout_percent >= max_timeouts |
+               total_games < min_total_games)
+
+    return(removals)
   }
-
-  removals <- user_details %>%
-    filter(timeout_percent >= max_timeouts | total_games < min_total_games)
-}
 
 ##########################
 ### MEMEBER MANAGEMENT ###
