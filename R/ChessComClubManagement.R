@@ -34,7 +34,7 @@ getMatchDetailsForMatches <- function(club_id, match_ids) {
     match_details <- match_details %>% rbind(details)
     i <- i + 1
   }
-  message(paste("Finished fetching details for", length(match_ids), "matches"))
+  message(paste("Finished fetching details for", total_matches, "matches"))
   return(match_details)
 }
 
@@ -108,7 +108,7 @@ getMatchUrls <-
           return(NA)
         },
         warning = function(w) {
-          stop("Warning: matches cannot be found")
+          stop("Error: matches cannot be found")
           print(w)
           return(NA)
         }
@@ -218,7 +218,7 @@ getMatchResults <- function(club_id) {
         return(NA)
       },
       warning = function(w) {
-        stop("Warning: matches cannot be found")
+        stop("Error: matches cannot be found")
         print(w)
         return(NA)
       }
@@ -259,7 +259,7 @@ getPlayersToRemoveFromMatch <-
            min_total_games) {
 
     if (is.na(match_id) | is.na(club_id) | is.na(max_timeouts) | is.na(min_total_games)) {
-      stop("Parameters cannot be NA")
+      stop("Error: Parameters cannot be NA")
     }
 
     match_details <- getMatchDetailsForMatches(club_id, match_id)
@@ -284,7 +284,7 @@ getPlayersToRemoveFromMatch <-
     total_players <- length(players)
 
     if (total_players == 0) {
-      stop(paste0("No players signed up for match ", match_id, " on team ", club_id))
+      stop(paste0("Error: No players signed up for match ", match_id, " on team ", club_id))
     }
 
     i <- 1
@@ -330,7 +330,7 @@ getAllMembersByActivity <- function(club_id) {
         return(NA)
       },
       warning = function(w) {
-        stop("Warning: members cannot be found")
+        stop("Error: members cannot be found")
         print(w)
         return(NA)
       }
@@ -660,7 +660,7 @@ getUsersToInvite <- function(club_id,
   if (nchar(country_code) != 2 & !is.na(country_code)) {
     stop(
       paste0(
-        "Invalid country code: ",
+        "Error: Invalid country code: ",
         country_code,
         ". Please find the correct country code here:
                https://www.chess.com/news/view/published-data-api#pubapi-endpoint-country"
