@@ -243,6 +243,38 @@ getMatchResults <- function(club_id) {
 
 }
 
+
+getPlayersToRemoveFromMatch <- function(match_id, club_id, max_timeouts, min_total_games) {
+  match_details <- getMatchDetailsForMatches(club_id, match_id)
+
+  players <- match_details$username
+
+  user_details <- data.frame(
+    username = character(),
+    url = character(),
+    joined_club = numeric(),
+    joined_site = numeric(),
+    last_online = numeric(),
+    country = character(),
+    daily_rating  = numeric(),
+    daily_960_rating  = numeric(),
+    time_per_move  = numeric(),
+    timeout_percent = numeric(),
+    activity = character(),
+    total_games = numeric()
+  )
+
+  total_players <- length(players)
+  for (player in players) {
+    print(paste0("Fetching ", i, "/", total_players))
+    stats <- getUserStats(user_id = players[i])
+    user_details <- user_details %>% rbind(stats)
+  }
+
+  removals <- user_details %>%
+    filter(timeout_percent >= max_timeouts | total_games < min_total_games)
+}
+
 ##########################
 ### MEMEBER MANAGEMENT ###
 ##########################
