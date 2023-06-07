@@ -26,10 +26,11 @@ getMatchDetailsForMatches <- function(club_id, match_ids) {
     time_out_count = character()
   )
 
+  total_matches <- length(match_ids)
   i <- 1
-  while (i <= length(match_ids)) {
-    print(paste0(i, "/", length(match_ids), ": Fetching match: ", match_ids[i]))
-    details <- .getMatchDetails(club_id, match_ids[i])
+  for (match in match_ids) {
+    print(paste0(i, "/", total_matches, ": Fetching match: ", match))
+    details <- .getMatchDetails(club_id, match)
     match_details <- match_details %>% rbind(details)
     i <- i + 1
   }
@@ -58,16 +59,15 @@ getMatchIds <-
                    include_upcoming,
                    nDays)
 
+    total_matches <- length(all_matches)
     match_ids <-
-      vector(mode = "character", length = length(all_matches) - 2)
+      vector(mode = "character")
 
-    i <- 2
-    while (i < length(all_matches)) {
-      match <- all_matches[[i]]
+
+    for (match in all_matches ) {
       url_elements <- match %>% str_split_1('/')
       match_id <- url_elements %>% last()
-      match_ids[i - 1] <- match_id
-      i <- i + 1
+      match_ids <- append(match_ids, match_id)
     }
     message(paste("Finished fetching", length(match_ids), "matches"))
     return(match_ids)
@@ -114,6 +114,7 @@ getMatchUrls <-
         }
       )
 
+    matches <- vector(mode = "character")
     if (include_finished) {
       message("Including finished matches...")
 
@@ -569,16 +570,17 @@ getAllMemberStats <- function(club_id) {
   all_members <- getAllClubMembers(club_id)
   user_ids <- all_members$username
 
+  total_users <- length(user_ids)
   i <- 1
-  while (i <= length(user_ids)) {
+  for (user_id in user_ids) {
     print(paste0(
       i,
       "/",
-      length(user_ids),
+      total_users,
       ": Fetching stats for user: ",
-      user_ids[i]
+      user_id
     ))
-    details <- getUserStats(user_ids[i])
+    details <- getUserStats(user_id)
     if (class(details) == "data.frame") {
       user_details <- user_details %>% rbind(details)
     }
