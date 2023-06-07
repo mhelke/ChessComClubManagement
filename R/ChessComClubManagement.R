@@ -27,13 +27,13 @@ getMatchDetailsForMatches <- function(club_id, match_ids) {
   )
 
   i <- 1
-  while(i <= length(match_ids)) {
+  while (i <= length(match_ids)) {
     print(paste0(i, "/", length(match_ids), ": Fetching match: ", match_ids[i]))
     details <- .getMatchDetails(club_id, match_ids[i])
     match_details <- match_details %>% rbind(details)
-    i <- i+1
+    i <- i + 1
   }
-  print(paste("Finished fetching details for", length(match_ids), "matches"))
+  message(paste("Finished fetching details for", length(match_ids), "matches"))
   return(match_details)
 }
 
@@ -45,22 +45,33 @@ getMatchDetailsForMatches <- function(club_id, match_ids) {
 #' @return List of match IDs
 #' @source chess.com public API
 #' @export
-getMatchIds <- function(club_id, include_finished = TRUE, include_in_progress = TRUE, include_upcoming = TRUE, nDays = NA) {
-  all_matches <- getMatchUrls(club_id, include_finished, include_in_progress, include_upcoming, nDays)
+getMatchIds <-
+  function(club_id,
+           include_finished = TRUE,
+           include_in_progress = TRUE,
+           include_upcoming = TRUE,
+           nDays = NA) {
+    all_matches <-
+      getMatchUrls(club_id,
+                   include_finished,
+                   include_in_progress,
+                   include_upcoming,
+                   nDays)
 
-  match_ids <- vector(mode="character", length = length(all_matches)-2)
+    match_ids <-
+      vector(mode = "character", length = length(all_matches) - 2)
 
-  i <- 2
-  while(i < length(all_matches)) {
-    match <- all_matches[[i]]
-    url_elements <- match %>% str_split_1('/')
-    match_id <- url_elements %>% last()
-    match_ids[i-1] <- match_id
-    i <- i+1
+    i <- 2
+    while (i < length(all_matches)) {
+      match <- all_matches[[i]]
+      url_elements <- match %>% str_split_1('/')
+      match_id <- url_elements %>% last()
+      match_ids[i - 1] <- match_id
+      i <- i + 1
+    }
+    message(paste("Finished fetching", length(match_ids), "matches"))
+    return(match_ids)
   }
-  print(paste("Finished fetching", length(match_ids), "matches"))
-  return(match_ids)
-}
 
 #' @description Retrieves the URLs of matches for the given club
 #' @note Use `getMatchIds` to retrieve only the IDs of the match.
@@ -71,57 +82,78 @@ getMatchIds <- function(club_id, include_finished = TRUE, include_in_progress = 
 #' @return List of match URLs
 #' @source chess.com public API
 #' @export
-getMatchUrls <- function(club_id, include_finished = TRUE, include_in_progress = TRUE, include_upcoming = TRUE, nDays = NA) {
-  message <- ifelse(is.na(nDays), "all time", paste0("the past ", nDays, " days"))
-  print(paste0("Fetching team match URLs from ", message))
-  baseUrl <- "https://api.chess.com/pub/club/"
-  endpoint <- paste0(baseUrl, club_id, "/matches", sep = "", collapse = NULL)
+getMatchUrls <-
+  function(club_id,
+           include_finished = TRUE,
+           include_in_progress = TRUE,
+           include_upcoming = TRUE,
+           nDays = NA) {
+    message <-
+      ifelse(is.na(nDays), "all time", paste0("the past ", nDays, " days"))
+    message(paste0("Fetching team match URLs from ", message))
+    baseUrl <- "https://api.chess.com/pub/club/"
+    endpoint <-
+      paste0(baseUrl,
+             club_id,
+             "/matches",
+             sep = "",
+             collapse = NULL)
 
-  club_matches_raw <- try(fromJSON(toString(endpoint), flatten = TRUE))
+    club_matches_raw <-
+      tryCatch(
+        fromJSON(toString(endpoint), flatten = TRUE),
+        error = function(e) {
+          stop("Error: matches cannot be found")
+          print(e)
+          return(NA)
+        },
+        warning = function(w) {
+          stop("Warning: matches cannot be found")
+          print(w)
+          return(NA)
+        }
+      )
 
-  if(class(club_matches_raw) == "try-error") {
-    stop("Error: matches cannot be found")
-  }
+    if (include_finished) {
+      message("Including finished matches...")
 
-  if(include_finished) {
-    print("Including finished matches...")
+      if (!is.na(nDays)) {
+        current_time <- as.numeric(as.POSIXct(Sys.time()))
+        one_day <- 86400
+        days_ago <- current_time - nDays * one_day
 
-    if(!is.na(nDays)) {
-      current_time <- as.numeric(as.POSIXct(Sys.time()))
-      one_day <- 86400
-      days_ago <- current_time - nDays*one_day
+        finished_matches <-
+          club_matches_raw$finished %>% filter(start_time > days_ago)
+      } else {
+        finished_matches <- club_matches_raw$finished
+      }
 
-      finished_matches <- club_matches_raw$finished %>% filter(start_time > days_ago)
-    } else {
-      finished_matches <- club_matches_raw$finished
+      finished_matches <- finished_matches %>%
+        filter(time_class == "daily")
+      finished_matches <- finished_matches$`@id` %>% as.list()
+
+      matches <- append(matches, finished_matches)
     }
+    if (include_upcoming) {
+      message("Including upcoming matches...")
 
-    finished_matches <- finished_matches %>%
-      filter(time_class == "daily")
-    finished_matches <- finished_matches$`@id` %>% as.list()
+      upcoming_matches <- club_matches_raw$registered %>%
+        filter(time_class == "daily")
+      upcoming_matches <- upcoming_matches$`@id` %>% as.list()
 
-    matches <- append(matches, finished_matches)
+      matches <- append(matches, upcoming_matches)
+    }
+    if (include_in_progress) {
+      message("Including in-progress matches...")
+
+      in_progress_matches <- club_matches_raw$in_progress %>%
+        filter(time_class == "daily")
+      in_progress_matches <- in_progress_matches$`@id` %>% as.list()
+
+      matches <- append(matches, in_progress_matches)
+    }
+    return(matches)
   }
-  if(include_upcoming) {
-    print("Including upcoming matches...")
-
-    upcoming_matches <- club_matches_raw$registered %>%
-      filter(time_class == "daily")
-    upcoming_matches <- upcoming_matches$`@id` %>% as.list()
-
-    matches <- append(matches, upcoming_matches)
-  }
-  if(include_in_progress) {
-    print("Including in-progress matches...")
-
-    in_progress_matches <- club_matches_raw$in_progress %>%
-      filter(time_class == "daily")
-    in_progress_matches <- in_progress_matches$`@id` %>% as.list()
-
-    matches <- append(matches, in_progress_matches)
-  }
-  return(matches)
-}
 
 #' @description Retrieves the all time stats from team matches and creates a leader board
 #' @param club_id ID of the club you want the leader board for
@@ -130,23 +162,29 @@ getMatchUrls <- function(club_id, include_finished = TRUE, include_in_progress =
 #' @source chess.com public API
 #' @export
 getAllTimeLeaderBoard <- function(club_id) {
-
   # Match IDs for all daily events
-  match_ids <- getMatchIds(club_id, include_finished = TRUE, include_in_progress = TRUE, include_upcoming = FALSE)
+  match_ids <-
+    getMatchIds(
+      club_id,
+      include_finished = TRUE,
+      include_in_progress = TRUE,
+      include_upcoming = FALSE
+    )
 
-  all_time_match_results <- getMatchDetailsForMatches(club_id, match_ids) %>%
+  all_time_match_results <-
+    getMatchDetailsForMatches(club_id, match_ids) %>%
     mutate(wins = if_else(played_as_white == 1, 1, 0, 0)) %>%
-    mutate(wins = if_else(played_as_black == 1, wins+1, wins, wins)) %>%
+    mutate(wins = if_else(played_as_black == 1, wins + 1, wins, wins)) %>%
     mutate(draws = if_else(played_as_white == .5, 1, 0, 0)) %>%
-    mutate(draws = if_else(played_as_black == .5, draws+1, draws, draws)) %>%
+    mutate(draws = if_else(played_as_black == .5, draws + 1, draws, draws)) %>%
     mutate(losses = if_else(played_as_white == 0, 1, 0, 0)) %>%
-    mutate(losses = if_else(played_as_black == 0, losses+1, losses, losses)) %>%
+    mutate(losses = if_else(played_as_black == 0, losses + 1, losses, losses)) %>%
     mutate(played_as_white = if_else(is.na(played_as_white), 0, played_as_white)) %>%
     mutate(played_as_black = if_else(is.na(played_as_black), 0, played_as_black)) %>%
     group_by(username) %>%
     summarise(
       games = sum(wins) + sum(draws) + sum(losses),
-      score = sum(wins) + (sum(draws)/2),
+      score = sum(wins) + (sum(draws) / 2),
       wins = sum(wins),
       draws = sum(draws),
       losses = sum(losses)
@@ -163,14 +201,27 @@ getAllTimeLeaderBoard <- function(club_id) {
 #' @export
 getMatchResults <- function(club_id) {
   baseUrl <- "https://api.chess.com/pub/club/"
-  endpoint <- paste0(baseUrl, club_id, "/matches", sep = "", collapse = NULL)
+  endpoint <-
+    paste0(baseUrl,
+           club_id,
+           "/matches",
+           sep = "",
+           collapse = NULL)
 
-  matches_raw <- try(fromJSON(toString(endpoint), flatten = TRUE), silent = TRUE)
-
-  # Sometimes aborted matches are included from the API. Ignore these.
-  if(class(matches_raw) == "try-error") {
-    stop("Error: matches cannot be found")
-  }
+  matches_raw <-
+    tryCatch(
+      fromJSON(toString(endpoint), flatten = TRUE),
+      error = function(e) {
+        stop("Error: matches cannot be found")
+        print(e)
+        return(NA)
+      },
+      warning = function(w) {
+        stop("Warning: matches cannot be found")
+        print(w)
+        return(NA)
+      }
+    )
 
   matches <- matches_raw$finished %>%
     filter(time_class == "daily") %>%
@@ -203,15 +254,28 @@ getMatchResults <- function(club_id) {
 #' @source chess.com public API
 #' @export
 getAllMembersByActivity <- function(club_id) {
-  print(paste("Fetching members for club:", club_id))
+  message(paste("Fetching members for club:", club_id))
   baseUrl <- "https://api.chess.com/pub/club/"
-  endpoint <- paste0(baseUrl, club_id, "/members", sep = "", collapse = NULL)
-  member_activity_raw <- try(fromJSON(toString(endpoint), flatten = TRUE))
-
-  if(class(member_activity_raw) == "try-error") {
-    stop("Error: members cannot be found")
-  }
-
+  endpoint <-
+    paste0(baseUrl,
+           club_id,
+           "/members",
+           sep = "",
+           collapse = NULL)
+  member_activity_raw <-
+    tryCatch(
+      fromJSON(toString(endpoint), flatten = TRUE),
+      error = function(e) {
+        stop("Error: members cannot be found")
+        print(e)
+        return(NA)
+      },
+      warning = function(w) {
+        stop("Warning: members cannot be found")
+        print(w)
+        return(NA)
+      }
+    )
   return(member_activity_raw)
 }
 
@@ -239,7 +303,8 @@ getAllClubMembers <- function(club_id) {
     mutate(activity = "Inactive") %>%
     rename(joined_club = joined)
 
-  all_club_members <- rbind(weekly_members, monthly_members, all_time_members) %>%
+  all_club_members <-
+    rbind(weekly_members, monthly_members, all_time_members) %>%
     as.data.frame()
 
   return(all_club_members)
@@ -254,7 +319,8 @@ getInactiveMatchPlayers <- function(club_id) {
   # Get all match Ids
   all_match_ids <- getMatchIds(club_id)
 
-  all_match_details_raw <- getMatchDetailsForMatches(club_id, all_match_ids)
+  all_match_details_raw <-
+    getMatchDetailsForMatches(club_id, all_match_ids)
 
   all_players_in_matches <- all_match_details_raw %>%
     select(username) %>%
@@ -265,7 +331,10 @@ getInactiveMatchPlayers <- function(club_id) {
   no_matches_past_90_days <- all_club_members %>%
     anti_join(all_players_in_matches, by = "username") %>%
     arrange(joined) %>%
-    mutate(joined = format(as.POSIXct(joined, origin = "1970-01-01", tz = "UTC"), "%m/%d/%Y"))
+    mutate(joined = format(
+      as.POSIXct(joined, origin = "1970-01-01", tz = "UTC"),
+      "%m/%d/%Y"
+    ))
 
   return(no_matches_past_90_days)
 }
@@ -278,53 +347,143 @@ getInactiveMatchPlayers <- function(club_id) {
 getUserStats <- function(user_id) {
   baseUrl <- "https://api.chess.com/pub/player/"
   endpoint <- paste0(baseUrl, user_id, sep = "", collapse = NULL)
-  user_profile <- try(fromJSON(toString(endpoint), flatten = TRUE)) # raw data of member activity (username, join date)
 
-  if(class(user_profile) == "try-error") {
-    stop(paste("Error: user ", user_id, " cannot be found", sep = "", collapse = NULL))
-  }
-
+  # raw data of member activity (username, join date)
+  user_profile <-
+    tryCatch(
+      fromJSON(toString(endpoint), flatten = TRUE),
+      error = function(e) {
+        warning(paste(
+          "Error: user ",
+          user_id,
+          " cannot be found",
+          sep = "",
+          collapse = NULL
+        ))
+        print(e)
+        return(NA)
+      },
+      warning = function(w) {
+        warning(paste(
+          "Warning: user ",
+          user_id,
+          " cannot be found",
+          sep = "",
+          collapse = NULL
+        ))
+        print(w)
+        return(NA)
+      }
+    )
   user_profile <- as.data.frame(user_profile)
 
   baseUrl <- "https://api.chess.com/pub/player/"
-  endpoint <- paste0(baseUrl, user_id, "/stats", sep = "", collapse = NULL)
-  user_stats_raw <- try(fromJSON(toString(endpoint), simplifyVector = TRUE, simplifyDataFrame = TRUE, flatten = TRUE))
+  endpoint <-
+    paste0(baseUrl,
+           user_id,
+           "/stats",
+           sep = "",
+           collapse = NULL)
 
-  if(class(user_stats_raw) == "try-error") {
-    stop(paste("Error: stats for user ", user_id, " cannot be found", sep = "", collapse = NULL))
-  }
+  user_stats_raw <-
+    tryCatch(
+      fromJSON(
+        toString(endpoint),
+        simplifyVector = TRUE,
+        simplifyDataFrame = TRUE,
+        flatten = TRUE
+      ),
+      error = function(e) {
+        warning(paste(
+          "Error: stats for user ",
+          user_id,
+          " cannot be found",
+          sep = "",
+          collapse = NULL
+        ))
+        print(e)
+        return(NA)
+      },
+      warning = function(w) {
+        warning(paste(
+          "Warning: stats for user ",
+          user_id,
+          " cannot be found",
+          sep = "",
+          collapse = NULL
+        ))
+        print(w)
+        return(NA)
+      }
+    )
 
   user_stats_unlisted <- unlist(user_stats_raw , use.names = TRUE)
 
   user_stats <- as.data.frame(t(user_stats_unlisted))
-  seconds_in_hour <- 60*60
+  seconds_in_hour <- 60 * 60
 
   user_stats <- .add_cols(
     user_stats,
-    c("chess_daily.last.rating",
+    c(
+      "chess_daily.last.rating",
       "chess960_daily.last.rating",
       "chess_daily.record.time_per_move",
       "chess_daily.record.timeout_percent",
       "chess_daily.record.win",
       "chess_daily.record.loss",
       "chess_daily.record.draw"
-      ))
+    )
+  )
 
   user_clean_stats <- user_stats %>%
-    select(chess_daily.last.rating, chess960_daily.last.rating, chess_daily.record.time_per_move, chess_daily.record.timeout_percent,
-           chess_daily.record.win, chess_daily.record.loss, chess_daily.record.draw) %>%
+    select(
+      chess_daily.last.rating,
+      chess960_daily.last.rating,
+      chess_daily.record.time_per_move,
+      chess_daily.record.timeout_percent,
+      chess_daily.record.win,
+      chess_daily.record.loss,
+      chess_daily.record.draw
+    ) %>%
     mutate(username = user_id) %>%
-    mutate(across(c(chess_daily.last.rating, chess960_daily.last.rating, chess_daily.record.time_per_move, chess_daily.record.timeout_percent,
-                    chess_daily.record.win, chess_daily.record.loss, chess_daily.record.draw), as.numeric)) %>%
+    mutate(across(
+      c(
+        chess_daily.last.rating,
+        chess960_daily.last.rating,
+        chess_daily.record.time_per_move,
+        chess_daily.record.timeout_percent,
+        chess_daily.record.win,
+        chess_daily.record.loss,
+        chess_daily.record.draw
+      ),
+      as.numeric
+    )) %>%
     rename(daily_rating = chess_daily.last.rating) %>%
     rename(daily_960_rating = chess960_daily.last.rating) %>%
     rename(time_per_move = chess_daily.record.time_per_move) %>%
     rename(timeout_percent = chess_daily.record.timeout_percent) %>%
-    mutate(time_per_move = time_per_move/(seconds_in_hour)) %>%
+    mutate(time_per_move = time_per_move / (seconds_in_hour)) %>%
     inner_join(user_profile, by = "username") %>%
     rename(joined_site = joined) %>%
-    mutate(total_games = sum(chess_daily.record.win, chess_daily.record.loss, chess_daily.record.draw)) %>%
-    select(username, url, joined_site, last_online, country, daily_rating, daily_960_rating, time_per_move, timeout_percent, total_games)
+    mutate(
+      total_games = sum(
+        chess_daily.record.win,
+        chess_daily.record.loss,
+        chess_daily.record.draw
+      )
+    ) %>%
+    select(
+      username,
+      url,
+      joined_site,
+      last_online,
+      country,
+      daily_rating,
+      daily_960_rating,
+      time_per_move,
+      timeout_percent,
+      total_games
+    )
 
   return(user_clean_stats)
 }
@@ -353,16 +512,37 @@ getAllMemberStats <- function(club_id) {
   user_ids <- all_members$username
 
   i <- 1
-  while(i <= length(user_ids)) {
-    print(paste0(i, "/", length(user_ids), ": Fetching stats for user: ", user_ids[i]))
+  while (i <= length(user_ids)) {
+    print(paste0(
+      i,
+      "/",
+      length(user_ids),
+      ": Fetching stats for user: ",
+      user_ids[i]
+    ))
     details <- getUserStats(user_ids[i])
-    user_details <- user_details %>% rbind(details)
-    i <- i+1
+    if (class(details) == "data.frame") {
+      user_details <- user_details %>% rbind(details)
+    }
+    i <- i + 1
   }
 
   user_details <- user_details %>%
     inner_join(all_members, by = "username") %>%
-    select(username, url, joined_club, joined_site, last_online, activity, country, daily_rating, daily_960_rating, time_per_move, timeout_percent, total_games)
+    select(
+      username,
+      url,
+      joined_club,
+      joined_site,
+      last_online,
+      activity,
+      country,
+      daily_rating,
+      daily_960_rating,
+      time_per_move,
+      timeout_percent,
+      total_games
+    )
 
   return(user_details)
 }
@@ -373,15 +553,25 @@ getAllMemberStats <- function(club_id) {
 #' @source chess.com public API
 #' @export
 convertCountryCode <- function(countryEndpoint) {
-  if(is.na(countryEndpoint)) {
+  if (is.na(countryEndpoint)) {
     return(NA)
   }
   print(paste0("Converting country ", countryEndpoint))
-  country_info <- try(fromJSON(toString(countryEndpoint), flatten = TRUE)) # raw data of member activity (username, join date)
-  if(class(country_info) == "try-error") {
-    warning("Failed to fetch country")
-    return(NA)
-  }
+
+  # raw data of member activity (username, join date)
+  country_info <- tryCatch(
+    fromJSON(toString(countryEndpoint), flatten = TRUE),
+    error = function(e) {
+      warning("Failed to fetch country")
+      print(e)
+      return(NA)
+    },
+    warning = function(w) {
+      warning("Failed to fetch country")
+      print(w)
+      return(NA)
+    }
+  )
   return(country_info$name)
 }
 
@@ -406,11 +596,16 @@ getUsersToInvite <- function(club_id,
                              min_months_account_age = 0,
                              min_days_last_online = NA,
                              country_code = NA) {
-
   # Verify given data is accurate
   if (nchar(country_code) != 2 & !is.na(country_code)) {
-   stop(paste0("Invalid country code: ", country_code, ". Please find the correct country code here:
-               https://www.chess.com/news/view/published-data-api#pubapi-endpoint-country"))
+    stop(
+      paste0(
+        "Invalid country code: ",
+        country_code,
+        ". Please find the correct country code here:
+               https://www.chess.com/news/view/published-data-api#pubapi-endpoint-country"
+      )
+    )
   }
 
   # Fetch club members
@@ -424,43 +619,68 @@ getUsersToInvite <- function(club_id,
   # Get a list of users who meet the criteria
 
   # Timeouts
-  if(!is.na(max_timeout)) {
+  if (!is.na(max_timeout)) {
     start <- count(invites)
     invites <- invites %>%
       filter(timeout_percent <= max_timeout)
 
     change <- start - count(invites)
-    print(paste0("Dropped ", change, " players on max timeout requirement of ", max_timeout))
+    message(paste0(
+      "Dropped ",
+      change,
+      " players on max timeout requirement of ",
+      max_timeout
+    ))
   }
 
   # Move speed
-  if(!is.na(max_move_speed)) {
+  if (!is.na(max_move_speed)) {
     start <- count(invites)
     invites <- invites %>%
       filter(time_per_move <= max_move_speed)
 
     change <- start - count(invites)
-    print(paste0("Dropped ", change, " players on max move speed requirement of ", max_move_speed))
+    message(
+      paste0(
+        "Dropped ",
+        change,
+        " players on max move speed requirement of ",
+        max_move_speed
+      )
+    )
   }
 
   # Last online date
-  if(!is.na(min_days_last_online)) {
+  if (!is.na(min_days_last_online)) {
     start <- count(invites)
     invites <- invites %>%
       filter(last_online >= ymd(Sys.Date()) - days(min_days_last_online))
 
     change <- start - count(invites)
-    print(paste0("Dropped ", change, " players on min days last online requirement of ", min_days_last_online, " days"))
+    message(
+      paste0(
+        "Dropped ",
+        change,
+        " players on min days last online requirement of ",
+        min_days_last_online,
+        " days"
+      )
+    )
   }
 
   # Country code
-  if(!is.na(country_code)) {
+  if (!is.na(country_code)) {
     start <- count(invites)
     invites <- invites %>%
       filter(grepl(country_code, str_sub(country, -2, -1), ignore.case = TRUE))
 
     change <- start - count(invites)
-    print(paste0("Dropped ", change, " players on country requirement of ", country_code))
+    message(paste0(
+      "Dropped ",
+      change,
+      " players on country requirement of ",
+      country_code
+    ))
   }
 
   # Completed games
@@ -469,7 +689,14 @@ getUsersToInvite <- function(club_id,
     filter(total_games >= min_games)
 
   change <- start - count(invites)
-  print(paste0("Dropped ", change, " players on minimum games played requirement of ", min_games))
+  message(
+    paste0(
+      "Dropped ",
+      change,
+      " players on minimum games played requirement of ",
+      min_games
+    )
+  )
 
   # Account age
   start <- count(invites)
@@ -477,13 +704,25 @@ getUsersToInvite <- function(club_id,
     filter(joined_site <= ymd(Sys.Date()) - months(min_months_account_age))
 
   change <- start - count(invites)
-  print(paste0("Dropped ", change, " players on account age requirement of ", min_months_account_age, " months"))
+  message(
+    paste0(
+      "Dropped ",
+      change,
+      " players on account age requirement of ",
+      min_months_account_age,
+      " months"
+    )
+  )
 
   final_count <- count(invites)
-  if(final_count == 0) {
+  if (final_count == 0) {
     warning("No players meet the given criteria!")
   } else {
-    print(paste0("Returning ", final_count, " players that meet the given criteria"))
+    message(paste0(
+      "Returning ",
+      final_count,
+      " players that meet the given criteria"
+    ))
   }
   return(invites)
 }
@@ -511,68 +750,124 @@ getUsersToInvite <- function(club_id,
   baseUrl <- "https://api.chess.com/pub/match/"
   endpoint <- paste0(baseUrl, match_id, sep = "", collapse = NULL)
 
-  match_details_raw <- try(fromJSON(toString(endpoint), flatten = TRUE), silent = TRUE)
-
-  # Sometimes aborted matches are included from the API. Ignore these.
-  if(class(match_details_raw) == "try-error") {
-    warning(paste("Match", match_id, "cannot be found"))
-    return(empty_tibble)
-  }
+  match_details_raw <- tryCatch(
+    fromJSON(toString(endpoint), flatten = TRUE),
+    error = function(e) {
+      # Sometimes aborted matches are included from the API. Ignore these.
+      warning(paste("Match", match_id, "cannot be found"))
+      print(e)
+      return(empty_tibble)
+    },
+    warning = function(w) {
+      warning(paste("Match", match_id, "cannot be found"))
+      print(w)
+      return(empty_tibble)
+    }
+  )
 
   team1 <- match_details_raw$teams$team1
   team2 <- match_details_raw$teams$team2
 
   found_matching_team <- FALSE
 
-  if(grepl(club_id, team1$`@id`, fixed=TRUE)) {
+  if (grepl(club_id, team1$`@id`, fixed = TRUE)) {
     my_team <- team1
     found_matching_team <- TRUE
   }
-  if(grepl(club_id, team2$`@id`, fixed=TRUE)) {
+  if (grepl(club_id, team2$`@id`, fixed = TRUE)) {
     my_team <- team2
     found_matching_team <- TRUE
   }
 
-  if(found_matching_team) {
+  if (found_matching_team) {
     # No players have registered yet, return an empty tibble
-    if(!"players" %in% names(my_team)) {
-      warning(paste("Could not find players for team", club_id, "for match", match_id))
+    if (!"players" %in% names(my_team)) {
+      warning(paste(
+        "Could not find players for team",
+        club_id,
+        "for match",
+        match_id
+      ))
       return(empty_tibble)
     }
 
     my_team_players <- my_team$players %>% as.data.frame()
 
-    if(all(dim(my_team_players)) == 0) {
-      warning(paste("No players registered for team", club_id, "for match", match_id))
+    if (all(dim(my_team_players)) == 0) {
+      warning(paste(
+        "No players registered for team",
+        club_id,
+        "for match",
+        match_id
+      ))
       return(empty_tibble)
     }
 
-    expected_col_names <- c("username", "stats", "timeout_percent", "status", "played_as_white", "played_as_black", "board")
-    missing_col <- setdiff(expected_col_names, names(my_team_players))
+    expected_col_names <-
+      c(
+        "username",
+        "stats",
+        "timeout_percent",
+        "status",
+        "played_as_white",
+        "played_as_black",
+        "board"
+      )
+    missing_col <-
+      setdiff(expected_col_names, names(my_team_players))
     my_team_players[missing_col] <- "In progress"
     my_team_players <- my_team_players[expected_col_names]
 
     # Add column for timeout
     my_team_players <- my_team_players %>%
       mutate(time_out_count = if_else(played_as_white == "timeout", 1, 0, 0)) %>%
-      mutate(time_out_count = if_else(played_as_black == "timeout", time_out_count+1, time_out_count, time_out_count))
+      mutate(
+        time_out_count = if_else(
+          played_as_black == "timeout",
+          time_out_count + 1,
+          time_out_count,
+          time_out_count
+        )
+      )
 
     # Refactor results to be 0, 1, or 1/2
     my_team_players <- my_team_players %>%
-      mutate(played_as_white = if_else(played_as_white %in% c("resigned", "checkmated", "timeout"), "0", played_as_white)) %>%
+      mutate(played_as_white = if_else(
+        played_as_white %in% c("resigned", "checkmated", "timeout"),
+        "0",
+        played_as_white
+      )) %>%
       mutate(played_as_white = if_else(played_as_white == "win", "1", played_as_white)) %>%
       mutate(played_as_white = if_else(is.na(played_as_white), "In progress", played_as_white)) %>%
-      mutate(played_as_white = if_else(!played_as_white %in% c("In progress", "0", "1"),"0.5", played_as_white)) %>%
-      mutate(played_as_black = if_else(played_as_black %in% c("resigned", "checkmated", "timeout"), "0", played_as_black)) %>%
+      mutate(played_as_white = if_else(
+        !played_as_white %in% c("In progress", "0", "1"),
+        "0.5",
+        played_as_white
+      )) %>%
+      mutate(played_as_black = if_else(
+        played_as_black %in% c("resigned", "checkmated", "timeout"),
+        "0",
+        played_as_black
+      )) %>%
       mutate(played_as_black = if_else(played_as_black == "win", "1", played_as_black)) %>%
       mutate(played_as_black = if_else(is.na(played_as_black), "In progress", played_as_black)) %>%
-      mutate(played_as_black = if_else(!played_as_black %in% c("In progress", "0", "1"),"0.5", played_as_black)) %>%
+      mutate(played_as_black = if_else(
+        !played_as_black %in% c("In progress", "0", "1"),
+        "0.5",
+        played_as_black
+      )) %>%
       mutate(played_as_white = as.numeric(played_as_white)) %>%
       mutate(played_as_black = as.numeric(played_as_black))
 
     # Drop the link to player stats API and member status columns.
     my_team_players <- my_team_players %>%
-      select(c(username, played_as_white, played_as_black, board, time_out_count))
+      select(c(
+        username,
+        played_as_white,
+        played_as_black,
+        board,
+        time_out_count
+      ))
 
   } else {
     my_team_players = empty_tibble
@@ -584,7 +879,8 @@ getUsersToInvite <- function(club_id,
 # Checks the data frame for the provided columns.If they do not exist, they're added and filled with NA values.
 .add_cols <- function(df, cols) {
   add <- cols[!cols %in% names(df)]
-  if(length(add) != 0) df[add] <- NA
+  if (length(add) != 0)
+    df[add] <- NA
   return(df)
 }
 
