@@ -77,6 +77,7 @@ getMatchUrls <- function(club_id, include_finished = TRUE, include_in_progress =
   baseUrl <- "https://api.chess.com/pub/club/"
   endpoint <- paste0(baseUrl, club_id, "/matches", sep = "", collapse = NULL)
 
+<<<<<<< HEAD
   club_matches_raw <-
     tryCatch(
       fromJSON(toString(endpoint), flatten = TRUE),
@@ -91,6 +92,13 @@ getMatchUrls <- function(club_id, include_finished = TRUE, include_in_progress =
         return(NA)
       }
     )
+=======
+  club_matches_raw <- try(fromJSON(toString(endpoint), flatten = TRUE))
+
+  if(class(club_matches_raw) == "try-error") {
+    stop("Error: matches cannot be found")
+  }
+>>>>>>> origin/master
 
   if(include_finished) {
     message("Including finished matches...")
@@ -174,6 +182,7 @@ getMatchResults <- function(club_id) {
   baseUrl <- "https://api.chess.com/pub/club/"
   endpoint <- paste0(baseUrl, club_id, "/matches", sep = "", collapse = NULL)
 
+<<<<<<< HEAD
   matches_raw <-
     tryCatch(
       fromJSON(toString(endpoint), flatten = TRUE),
@@ -188,6 +197,14 @@ getMatchResults <- function(club_id) {
         return(NA)
       }
     )
+=======
+  matches_raw <- try(fromJSON(toString(endpoint), flatten = TRUE), silent = TRUE)
+
+  # Sometimes aborted matches are included from the API. Ignore these.
+  if(class(matches_raw) == "try-error") {
+    stop("Error: matches cannot be found")
+  }
+>>>>>>> origin/master
 
   matches <- matches_raw$finished %>%
     filter(time_class == "daily") %>%
@@ -220,6 +237,7 @@ getMatchResults <- function(club_id) {
 #' @source chess.com public API
 #' @export
 getAllMembersByActivity <- function(club_id) {
+<<<<<<< HEAD
   message(paste("Fetching members for club:", club_id))
   baseUrl <- "https://api.chess.com/pub/club/"
   endpoint <- paste0(baseUrl, club_id, "/members", sep = "", collapse = NULL)
@@ -236,6 +254,17 @@ getAllMembersByActivity <- function(club_id) {
         print(w)
         return(NA)
       })
+=======
+  print(paste("Fetching members for club:", club_id))
+  baseUrl <- "https://api.chess.com/pub/club/"
+  endpoint <- paste0(baseUrl, club_id, "/members", sep = "", collapse = NULL)
+  member_activity_raw <- try(fromJSON(toString(endpoint), flatten = TRUE))
+
+  if(class(member_activity_raw) == "try-error") {
+    stop("Error: members cannot be found")
+  }
+
+>>>>>>> origin/master
   return(member_activity_raw)
 }
 
@@ -302,9 +331,16 @@ getInactiveMatchPlayers <- function(club_id) {
 getUserStats <- function(user_id) {
   baseUrl <- "https://api.chess.com/pub/player/"
   endpoint <- paste0(baseUrl, user_id, sep = "", collapse = NULL)
+<<<<<<< HEAD
 
   if(user_id == "maxisdead2") {
     return(NA)
+=======
+  user_profile <- try(fromJSON(toString(endpoint), flatten = TRUE)) # raw data of member activity (username, join date)
+
+  if(class(user_profile) == "try-error") {
+    stop(paste("Error: user ", user_id, " cannot be found", sep = "", collapse = NULL))
+>>>>>>> origin/master
   }
 
   # raw data of member activity (username, join date)
@@ -327,6 +363,7 @@ getUserStats <- function(user_id) {
 
   baseUrl <- "https://api.chess.com/pub/player/"
   endpoint <- paste0(baseUrl, user_id, "/stats", sep = "", collapse = NULL)
+<<<<<<< HEAD
 
 
    user_stats_raw <-
@@ -343,6 +380,13 @@ getUserStats <- function(user_id) {
         return(NA)
        }
      )
+=======
+  user_stats_raw <- try(fromJSON(toString(endpoint), simplifyVector = TRUE, simplifyDataFrame = TRUE, flatten = TRUE))
+
+  if(class(user_stats_raw) == "try-error") {
+    stop(paste("Error: stats for user ", user_id, " cannot be found", sep = "", collapse = NULL))
+  }
+>>>>>>> origin/master
 
   user_stats_unlisted <- unlist(user_stats_raw , use.names = TRUE)
 
@@ -429,6 +473,7 @@ convertCountryCode <- function(countryEndpoint) {
     return(NA)
   }
   print(paste0("Converting country ", countryEndpoint))
+<<<<<<< HEAD
 
   # raw data of member activity (username, join date)
   country_info <- tryCatch(
@@ -444,6 +489,13 @@ convertCountryCode <- function(countryEndpoint) {
        return(NA)
      }
     )
+=======
+  country_info <- try(fromJSON(toString(countryEndpoint), flatten = TRUE)) # raw data of member activity (username, join date)
+  if(class(country_info) == "try-error") {
+    warning("Failed to fetch country")
+    return(NA)
+  }
+>>>>>>> origin/master
   return(country_info$name)
 }
 
@@ -492,7 +544,11 @@ getUsersToInvite <- function(club_id,
       filter(timeout_percent <= max_timeout)
 
     change <- start - count(invites)
+<<<<<<< HEAD
     message(paste0("Dropped ", change, " players on max timeout requirement of ", max_timeout))
+=======
+    print(paste0("Dropped ", change, " players on max timeout requirement of ", max_timeout))
+>>>>>>> origin/master
   }
 
   # Move speed
@@ -502,7 +558,11 @@ getUsersToInvite <- function(club_id,
       filter(time_per_move <= max_move_speed)
 
     change <- start - count(invites)
+<<<<<<< HEAD
     message(paste0("Dropped ", change, " players on max move speed requirement of ", max_move_speed))
+=======
+    print(paste0("Dropped ", change, " players on max move speed requirement of ", max_move_speed))
+>>>>>>> origin/master
   }
 
   # Last online date
@@ -512,7 +572,11 @@ getUsersToInvite <- function(club_id,
       filter(last_online >= ymd(Sys.Date()) - days(min_days_last_online))
 
     change <- start - count(invites)
+<<<<<<< HEAD
     message(paste0("Dropped ", change, " players on min days last online requirement of ", min_days_last_online, " days"))
+=======
+    print(paste0("Dropped ", change, " players on min days last online requirement of ", min_days_last_online, " days"))
+>>>>>>> origin/master
   }
 
   # Country code
@@ -522,7 +586,11 @@ getUsersToInvite <- function(club_id,
       filter(grepl(country_code, str_sub(country, -2, -1), ignore.case = TRUE))
 
     change <- start - count(invites)
+<<<<<<< HEAD
     message(paste0("Dropped ", change, " players on country requirement of ", country_code))
+=======
+    print(paste0("Dropped ", change, " players on country requirement of ", country_code))
+>>>>>>> origin/master
   }
 
   # Completed games
@@ -531,7 +599,11 @@ getUsersToInvite <- function(club_id,
     filter(total_games >= min_games)
 
   change <- start - count(invites)
+<<<<<<< HEAD
   message(paste0("Dropped ", change, " players on minimum games played requirement of ", min_games))
+=======
+  print(paste0("Dropped ", change, " players on minimum games played requirement of ", min_games))
+>>>>>>> origin/master
 
   # Account age
   start <- count(invites)
@@ -539,13 +611,21 @@ getUsersToInvite <- function(club_id,
     filter(joined_site <= ymd(Sys.Date()) - months(min_months_account_age))
 
   change <- start - count(invites)
+<<<<<<< HEAD
   message(paste0("Dropped ", change, " players on account age requirement of ", min_months_account_age, " months"))
+=======
+  print(paste0("Dropped ", change, " players on account age requirement of ", min_months_account_age, " months"))
+>>>>>>> origin/master
 
   final_count <- count(invites)
   if(final_count == 0) {
     warning("No players meet the given criteria!")
   } else {
+<<<<<<< HEAD
     message(paste0("Returning ", final_count, " players that meet the given criteria"))
+=======
+    print(paste0("Returning ", final_count, " players that meet the given criteria"))
+>>>>>>> origin/master
   }
   return(invites)
 }
