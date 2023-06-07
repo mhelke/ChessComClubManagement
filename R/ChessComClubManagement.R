@@ -303,6 +303,10 @@ getUserStats <- function(user_id) {
   baseUrl <- "https://api.chess.com/pub/player/"
   endpoint <- paste0(baseUrl, user_id, sep = "", collapse = NULL)
 
+  if(user_id == "maxisdead2") {
+    return(NA)
+  }
+
   # raw data of member activity (username, join date)
   user_profile <-
     tryCatch(
@@ -402,7 +406,7 @@ getAllMemberStats <- function(club_id) {
   while(i <= length(user_ids)) {
     print(paste0(i, "/", length(user_ids), ": Fetching stats for user: ", user_ids[i]))
     details <- getUserStats(user_ids[i])
-    if (!is.na(details)) {
+    if (class(details) == "data.frame") {
      user_details <- user_details %>% rbind(details)
     }
     i <- i+1
