@@ -315,6 +315,7 @@ getPlayersToRemoveFromMatch <-
         total_games
       )
 
+
     return(removals)
   }
 
