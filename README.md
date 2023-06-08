@@ -17,6 +17,7 @@ ChessComClubManagement is a convenient package that can fetch useful information
   * Total timeouts in matches for the club
   * Total wins in matches for the club
   * Activity status within the club
+  * Total completed daily games
 
 #### Team Match Leaderboard
   * Username and link to their profile
@@ -32,6 +33,20 @@ ChessComClubManagement is a convenient package that can fetch useful information
   * Total wins 
   * Total draws
   * Total losses
+
+#### Match Management
+Find players who do not qualify to participate in a match on the following criteria:
+  * Timeout percentage
+  * Total completed daily games
+  
+#### Team Recruitment
+Recruit users to join your team based on the following criteria:
+  * Timeout percentage
+  * Move speed
+  * Total completed daily games
+  * Account age
+  * Days since last online
+  * Country
   
 ## How to install
 
