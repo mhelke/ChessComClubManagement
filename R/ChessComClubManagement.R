@@ -268,7 +268,6 @@ getPlayersToRemoveFromMatch <-
     user_details <- data.frame(
       username = character(),
       url = character(),
-      joined_club = numeric(),
       joined_site = numeric(),
       last_online = numeric(),
       country = character(),
@@ -300,7 +299,6 @@ getPlayersToRemoveFromMatch <-
     }
 
     removals <- user_details %>%
-      mutate(joined_club = as_datetime(joined_club)) %>%
       mutate(joined_site = as_datetime(joined_site)) %>%
       mutate(last_online = as_datetime(last_online)) %>%
       filter(timeout_percent >= max_timeouts |
@@ -308,7 +306,6 @@ getPlayersToRemoveFromMatch <-
       select(
         username,
         url,
-        joined_club,
         joined_site,
         last_online,
         daily_rating,
