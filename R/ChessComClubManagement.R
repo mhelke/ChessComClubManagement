@@ -26,14 +26,15 @@ getMatchDetailsForMatches <- function(club_id, match_ids) {
     time_out_count = character()
   )
 
+  total_matches <- length(match_ids)
   i <- 1
-  while (i <= length(match_ids)) {
-    print(paste0(i, "/", length(match_ids), ": Fetching match: ", match_ids[i]))
-    details <- .getMatchDetails(club_id, match_ids[i])
+  for (match in match_ids) {
+    print(paste0(i, "/", total_matches, ": Fetching match: ", match))
+    details <- .getMatchDetails(club_id, match)
     match_details <- match_details %>% rbind(details)
     i <- i + 1
   }
-  message(paste("Finished fetching details for", length(match_ids), "matches"))
+  message(paste("Finished fetching details for", total_matches, "matches"))
   return(match_details)
 }
 
@@ -58,16 +59,14 @@ getMatchIds <-
                    include_upcoming,
                    nDays)
 
+    total_matches <- length(all_matches)
     match_ids <-
-      vector(mode = "character", length = length(all_matches) - 2)
+      vector(mode = "character")
 
-    i <- 2
-    while (i < length(all_matches)) {
-      match <- all_matches[[i]]
+    for (match in all_matches) {
       url_elements <- match %>% str_split_1('/')
       match_id <- url_elements %>% last()
-      match_ids[i - 1] <- match_id
-      i <- i + 1
+      match_ids <- append(match_ids, match_id)
     }
     message(paste("Finished fetching", length(match_ids), "matches"))
     return(match_ids)
@@ -108,12 +107,13 @@ getMatchUrls <-
           return(NA)
         },
         warning = function(w) {
-          stop("Warning: matches cannot be found")
+          stop("Error: matches cannot be found")
           print(w)
           return(NA)
         }
       )
 
+    matches <- vector(mode = "character")
     if (include_finished) {
       message("Including finished matches...")
 
@@ -217,7 +217,7 @@ getMatchResults <- function(club_id) {
         return(NA)
       },
       warning = function(w) {
-        stop("Warning: matches cannot be found")
+        stop("Error: matches cannot be found")
         print(w)
         return(NA)
       }
@@ -256,9 +256,9 @@ getPlayersToRemoveFromMatch <-
            club_id,
            max_timeouts,
            min_total_games) {
-
-    if (is.na(match_id) | is.na(club_id) | is.na(max_timeouts) | is.na(min_total_games)) {
-      stop("Parameters cannot be NA")
+    if (is.na(match_id) |
+        is.na(club_id) | is.na(max_timeouts) | is.na(min_total_games)) {
+      stop("Error: Parameters cannot be NA")
     }
 
     match_details <- getMatchDetailsForMatches(club_id, match_id)
@@ -268,7 +268,6 @@ getPlayersToRemoveFromMatch <-
     user_details <- data.frame(
       username = character(),
       url = character(),
-      joined_club = numeric(),
       joined_site = numeric(),
       last_online = numeric(),
       country = character(),
@@ -283,7 +282,12 @@ getPlayersToRemoveFromMatch <-
     total_players <- length(players)
 
     if (total_players == 0) {
-      stop(paste0("No players signed up for match ", match_id, " on team ", club_id))
+      stop(paste0(
+        "Error: No players are signed up for match ",
+        match_id,
+        " on team ",
+        club_id
+      ))
     }
 
     i <- 1
@@ -295,8 +299,22 @@ getPlayersToRemoveFromMatch <-
     }
 
     removals <- user_details %>%
+      mutate(joined_site = as_datetime(joined_site)) %>%
+      mutate(last_online = as_datetime(last_online)) %>%
       filter(timeout_percent >= max_timeouts |
-               total_games < min_total_games)
+               total_games < min_total_games) %>%
+      select(
+        username,
+        url,
+        joined_site,
+        last_online,
+        daily_rating,
+        daily_960_rating,
+        time_per_move,
+        timeout_percent,
+        total_games
+      )
+
 
     return(removals)
   }
@@ -329,7 +347,7 @@ getAllMembersByActivity <- function(club_id) {
         return(NA)
       },
       warning = function(w) {
-        stop("Warning: members cannot be found")
+        stop("Error: members cannot be found")
         print(w)
         return(NA)
       }
@@ -363,7 +381,8 @@ getAllClubMembers <- function(club_id) {
 
   all_club_members <-
     rbind(weekly_members, monthly_members, all_time_members) %>%
-    as.data.frame()
+    as.data.frame() %>%
+    mutate(joined_club = as_datetime(joined_club))
 
   return(all_club_members)
 }
@@ -530,6 +549,8 @@ getUserStats <- function(user_id) {
         chess_daily.record.draw
       )
     ) %>%
+    mutate(joined_site = as_datetime(joined_site)) %>%
+    mutate(last_online = as_datetime(last_online)) %>%
     select(
       username,
       url,
@@ -542,7 +563,6 @@ getUserStats <- function(user_id) {
       timeout_percent,
       total_games
     )
-
   return(user_clean_stats)
 }
 
@@ -569,16 +589,15 @@ getAllMemberStats <- function(club_id) {
   all_members <- getAllClubMembers(club_id)
   user_ids <- all_members$username
 
+  total_users <- length(user_ids)
   i <- 1
-  while (i <= length(user_ids)) {
-    print(paste0(
-      i,
-      "/",
-      length(user_ids),
-      ": Fetching stats for user: ",
-      user_ids[i]
-    ))
-    details <- getUserStats(user_ids[i])
+  for (user_id in user_ids) {
+    print(paste0(i,
+                 "/",
+                 total_users,
+                 ": Fetching stats for user: ",
+                 user_id))
+    details <- getUserStats(user_id)
     if (class(details) == "data.frame") {
       user_details <- user_details %>% rbind(details)
     }
@@ -658,7 +677,7 @@ getUsersToInvite <- function(club_id,
   if (nchar(country_code) != 2 & !is.na(country_code)) {
     stop(
       paste0(
-        "Invalid country code: ",
+        "Error: Invalid country code: ",
         country_code,
         ". Please find the correct country code here:
                https://www.chess.com/news/view/published-data-api#pubapi-endpoint-country"
@@ -730,7 +749,7 @@ getUsersToInvite <- function(club_id,
   if (!is.na(country_code)) {
     start <- count(invites)
     invites <- invites %>%
-      filter(grepl(country_code, str_sub(country, -2, -1), ignore.case = TRUE))
+      filter(grepl(country_code, str_sub(country,-2,-1), ignore.case = TRUE))
 
     change <- start - count(invites)
     message(paste0(
