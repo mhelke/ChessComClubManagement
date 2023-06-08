@@ -63,8 +63,7 @@ getMatchIds <-
     match_ids <-
       vector(mode = "character")
 
-
-    for (match in all_matches ) {
+    for (match in all_matches) {
       url_elements <- match %>% str_split_1('/')
       match_id <- url_elements %>% last()
       match_ids <- append(match_ids, match_id)
@@ -257,8 +256,8 @@ getPlayersToRemoveFromMatch <-
            club_id,
            max_timeouts,
            min_total_games) {
-
-    if (is.na(match_id) | is.na(club_id) | is.na(max_timeouts) | is.na(min_total_games)) {
+    if (is.na(match_id) |
+        is.na(club_id) | is.na(max_timeouts) | is.na(min_total_games)) {
       stop("Error: Parameters cannot be NA")
     }
 
@@ -284,7 +283,12 @@ getPlayersToRemoveFromMatch <-
     total_players <- length(players)
 
     if (total_players == 0) {
-      stop(paste0("Error: No players signed up for match ", match_id, " on team ", club_id))
+      stop(paste0(
+        "Error: No players are signed up for match ",
+        match_id,
+        " on team ",
+        club_id
+      ))
     }
 
     i <- 1
@@ -296,8 +300,23 @@ getPlayersToRemoveFromMatch <-
     }
 
     removals <- user_details %>%
+      mutate(joined_club = as_datetime(joined_club)) %>%
+      mutate(joined_site = as_datetime(joined_site)) %>%
+      mutate(last_online = as_datetime(last_online)) %>%
       filter(timeout_percent >= max_timeouts |
-               total_games < min_total_games)
+               total_games < min_total_games) %>%
+      select(
+        username,
+        url,
+        joined_club,
+        joined_site,
+        last_online,
+        daily_rating,
+        daily_960_rating,
+        time_per_move,
+        timeout_percent,
+        total_games
+      )
 
     return(removals)
   }
@@ -364,7 +383,8 @@ getAllClubMembers <- function(club_id) {
 
   all_club_members <-
     rbind(weekly_members, monthly_members, all_time_members) %>%
-    as.data.frame()
+    as.data.frame() %>%
+    mutate(joined_club = as_datetime(joined_club))
 
   return(all_club_members)
 }
@@ -531,6 +551,8 @@ getUserStats <- function(user_id) {
         chess_daily.record.draw
       )
     ) %>%
+    mutate(joined_site = as_datetime(joined_site)) %>%
+    mutate(last_online = as_datetime(last_online)) %>%
     select(
       username,
       url,
@@ -543,7 +565,6 @@ getUserStats <- function(user_id) {
       timeout_percent,
       total_games
     )
-
   return(user_clean_stats)
 }
 
@@ -573,13 +594,11 @@ getAllMemberStats <- function(club_id) {
   total_users <- length(user_ids)
   i <- 1
   for (user_id in user_ids) {
-    print(paste0(
-      i,
-      "/",
-      total_users,
-      ": Fetching stats for user: ",
-      user_id
-    ))
+    print(paste0(i,
+                 "/",
+                 total_users,
+                 ": Fetching stats for user: ",
+                 user_id))
     details <- getUserStats(user_id)
     if (class(details) == "data.frame") {
       user_details <- user_details %>% rbind(details)
@@ -732,7 +751,7 @@ getUsersToInvite <- function(club_id,
   if (!is.na(country_code)) {
     start <- count(invites)
     invites <- invites %>%
-      filter(grepl(country_code, str_sub(country, -2, -1), ignore.case = TRUE))
+      filter(grepl(country_code, str_sub(country,-2,-1), ignore.case = TRUE))
 
     change <- start - count(invites)
     message(paste0(
