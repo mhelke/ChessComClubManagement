@@ -319,6 +319,286 @@ getPlayersToRemoveFromMatch <-
     return(removals)
   }
 
+#########################
+### MATCH Predictions ###
+#########################
+
+predictMatch <- function(match_id) {
+
+  # copy getDetailsForMatches to an extent to get all players signed up on each board
+
+
+  # Go board by board comparing ratings and TO % if needed
+
+  # Return the project win for each baoard
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  # +100 = win
+  # -100 = loss
+  # within 100 = draw
+
+
+
+
+
+  # Get the rating range where the most concern is
+
+
+
+
+
+  empty_tibble <- tibble(
+    username = character(),
+    played_as_white = character(),
+    played_as_black = character(),
+    board = character(),
+    time_out_count = character()
+  )
+
+  baseUrl <- "https://api.chess.com/pub/match/"
+  endpoint <- paste0(baseUrl, match_id, sep = "", collapse = NULL)
+
+  match_details_raw <- tryCatch(
+    fromJSON(toString(endpoint), flatten = TRUE),
+    error = function(e) {
+      # Sometimes aborted matches are included from the API. Ignore these.
+      warning(paste("Match", match_id, "cannot be found"))
+      print(e)
+      return(empty_tibble)
+    },
+    warning = function(w) {
+      warning(paste("Match", match_id, "cannot be found"))
+      print(w)
+      return(empty_tibble)
+    }
+  )
+
+  team_1 <- match_details_raw$teams$team1$players
+  team_2 <- match_details_raw$teams$team2$players
+
+  team_1_name <- match_details_raw$teams$team1$name
+  team_2_name <- match_details_raw$teams$team2$name
+
+  team_1 <- team_1 %>%
+    select(rating) %>%
+    arrange(desc(rating))
+
+  team_2 <- team_2 %>%
+    select(rating) %>%
+    arrange(desc(rating))
+
+  team_1_ratings <- team_1$rating
+  team_2_ratings <- team_2$rating
+
+  max_length <- max(length(team_1_ratings), length(team_2_ratings))
+
+  length(team_1_ratings) <- max_length
+  length(team_2_ratings) <- max_length
+
+  matchup <-
+    cbind(team_1_ratings, team_2_ratings) %>%
+    as.data.frame()
+
+  matchup <- matchup %>% na.omit()
+
+  projections <- matchup %>%
+    mutate(projection_1 = if_else(between(team_1_ratings, team_2_ratings-50, team_2_ratings+50), "Split", NA)) %>%
+    mutate(projection_1 = if_else(team_1_ratings > team_2_ratings+50, "Team 1", projection_1)) %>%
+    mutate(projection_1 = if_else(team_2_ratings > team_1_ratings+50, "Team 2", projection_1)) %>%
+
+    mutate(projection_2 = if_else(between(team_1_ratings, team_2_ratings-100, team_2_ratings+100), "Split", NA)) %>%
+    mutate(projection_2 = if_else(team_1_ratings > team_2_ratings+100, "Team 1", projection_2)) %>%
+    mutate(projection_2 = if_else(team_2_ratings > team_1_ratings+100, "Team 2", projection_2))
+
+  ### Per board results -- ungrouped
+
+  ungrouped_projections <- projections %>%
+    mutate(team_1_score = if_else(projection_1 == "Split" & projection_2 == "Split", 1, 0)) %>%
+    mutate(team_2_score = if_else(projection_1 == "Split" & projection_2 == "Split", 1, 0)) %>%
+
+    mutate(team_1_score = if_else(projection_1 == "Team 1" & projection_2 == "Split", 1.5, team_1_score)) %>%
+    mutate(team_2_score = if_else(projection_1 == "Team 1" & projection_2 == "Split", 0.5, team_2_score)) %>%
+
+    mutate(team_1_score = if_else(projection_1 == "Team 1" & projection_2 == "Team 1", 2, team_1_score)) %>%
+    mutate(team_2_score = if_else(projection_1 == "Team 1" & projection_2 == "Team 1", 0, team_2_score)) %>%
+
+    mutate(team_1_score = if_else(projection_1 == "Team 2" & projection_2 == "Split", 0.5, team_1_score)) %>%
+    mutate(team_2_score = if_else(projection_1 == "Team 2" & projection_2 == "Split", 1.5, team_2_score)) %>%
+
+    mutate(team_1_score = if_else(projection_1 == "Team 2" & projection_2 == "Team 2", 0, team_1_score)) %>%
+    mutate(team_2_score = if_else(projection_1 == "Team 2" & projection_2 == "Team 2", 2, team_2_score))
+
+
+  ### Rating Ranges
+
+  projections_by_range <- matrix(ncol = 3, nrow = 14) %>% as.data.frame()
+
+  colnames(projections_by_range) <- c("Range", "Team 1", "Team 2")
+
+  range_projections <- ungrouped_projections %>%
+    filter(team_2_ratings < 800) %>%
+    summarise(
+      team_1_score = sum(team_1_score),
+      team_2_score = sum(team_2_score)
+    )
+  projections_by_range[1, 1:3] <- c("u800", range_projections$team_1_score, range_projections$team_2_score)
+
+  range_projections <- ungrouped_projections %>%
+    filter(between(team_2_ratings, 800, 900)) %>%
+    summarise(
+      team_1_score = sum(team_1_score),
+      team_2_score = sum(team_2_score)
+    )
+  projections_by_range[2, 1:3] <- c("900", range_projections$team_1_score, range_projections$team_2_score)
+
+  range_projections <- ungrouped_projections %>%
+    filter(between(team_2_ratings, 900, 1000)) %>%
+    summarise(
+      team_1_score = sum(team_1_score),
+      team_2_score = sum(team_2_score)
+    )
+  projections_by_range[3, 1:3] <- c("1000", range_projections$team_1_score, range_projections$team_2_score)
+
+  range_projections <- ungrouped_projections %>%
+    filter(between(team_2_ratings, 1000, 1100)) %>%
+    summarise(
+      team_1_score = sum(team_1_score),
+      team_2_score = sum(team_2_score)
+    )
+  projections_by_range[4, 1:3] <- c("1100", range_projections$team_1_score, range_projections$team_2_score)
+
+  range_projections <- ungrouped_projections %>%
+    filter(between(team_2_ratings, 1100, 1200)) %>%
+    summarise(
+      team_1_score = sum(team_1_score),
+      team_2_score = sum(team_2_score)
+    )
+  projections_by_range[5, 1:3] <- c("1200", range_projections$team_1_score, range_projections$team_2_score)
+
+  range_projections <- ungrouped_projections %>%
+    filter(between(team_2_ratings, 1200, 1300)) %>%
+    summarise(
+      team_1_score = sum(team_1_score),
+      team_2_score = sum(team_2_score)
+    )
+  projections_by_range[6, 1:3] <- c("1300", range_projections$team_1_score, range_projections$team_2_score)
+
+  range_projections <- ungrouped_projections %>%
+    filter(between(team_2_ratings, 1300, 1400)) %>%
+    summarise(
+      team_1_score = sum(team_1_score),
+      team_2_score = sum(team_2_score)
+    )
+  projections_by_range[7, 1:3] <- c("1400", range_projections$team_1_score, range_projections$team_2_score)
+
+  range_projections <-  ungrouped_projections %>%
+    filter(between(team_2_ratings, 1400, 1500)) %>%
+    summarise(
+      team_1_score = sum(team_1_score),
+      team_2_score = sum(team_2_score)
+    )
+  projections_by_range[8, 1:3] <- c("1500", range_projections$team_1_score, range_projections$team_2_score)
+
+  range_projections <-  ungrouped_projections %>%
+    filter(between(team_2_ratings, 1500, 1600)) %>%
+    summarise(
+      team_1_score = sum(team_1_score),
+      team_2_score = sum(team_2_score)
+    )
+  projections_by_range[9, 1:3] <- c("1600", range_projections$team_1_score, range_projections$team_2_score)
+
+  range_projections <- ungrouped_projections %>%
+    filter(between(team_2_ratings, 1600, 1700)) %>%
+    summarise(
+      team_1_score = sum(team_1_score),
+      team_2_score = sum(team_2_score)
+    )
+  projections_by_range[10, 1:3] <- c("1700", range_projections$team_1_score, range_projections$team_2_score)
+
+  range_projections <-  ungrouped_projections %>%
+    filter(between(team_2_ratings, 1700, 1800)) %>%
+    summarise(
+      team_1_score = sum(team_1_score),
+      team_2_score = sum(team_2_score)
+    )
+  projections_by_range[11, 1:3] <- c("1800", range_projections$team_1_score, range_projections$team_2_score)
+
+  range_projections <-  ungrouped_projections %>%
+    filter(between(team_2_ratings, 1800, 1900)) %>%
+    summarise(
+      team_1_score = sum(team_1_score),
+      team_2_score = sum(team_2_score)
+    )
+  projections_by_range[12, 1:3] <- c("1900", range_projections$team_1_score, range_projections$team_2_score)
+
+  range_projections <-   ungrouped_projections %>%
+    filter(between(team_2_ratings, 1900, 2000)) %>%
+    summarise(
+      team_1_score = sum(team_1_score),
+      team_2_score = sum(team_2_score)
+    )
+  projections_by_range[13, 1:3] <- c("2000", range_projections$team_1_score, range_projections$team_2_score)
+
+  range_projections <-  ungrouped_projections %>%
+    filter(team_2_ratings > 2000)  %>%
+    summarise(
+      team_1_score = sum(team_1_score),
+      team_2_score = sum(team_2_score)
+    )
+  projections_by_range[14, 1:3] <- c(">2000", range_projections$team_1_score, range_projections$team_2_score)
+
+  projections_by_range
+
+  # Grouped projection
+
+  projections %>%
+    group_by(projection_1, projection_2) %>%
+    tally() %>%
+    mutate(team_1_score = if_else(projection_1 == "Split" & projection_2 == "Split", 1, 0)) %>%
+    mutate(team_2_score = if_else(projection_1 == "Split" & projection_2 == "Split", 1, 0)) %>%
+
+    mutate(team_1_score = if_else(projection_1 == "Team 1" & projection_2 == "Split", 1.5, team_1_score)) %>%
+    mutate(team_2_score = if_else(projection_1 == "Team 1" & projection_2 == "Split", 0.5, team_2_score)) %>%
+
+    mutate(team_1_score = if_else(projection_1 == "Team 1" & projection_2 == "Team 1", 2, team_1_score)) %>%
+    mutate(team_2_score = if_else(projection_1 == "Team 1" & projection_2 == "Team 1", 0, team_2_score)) %>%
+
+    mutate(team_1_score = if_else(projection_1 == "Team 2" & projection_2 == "Split", 0.5, team_1_score)) %>%
+    mutate(team_2_score = if_else(projection_1 == "Team 2" & projection_2 == "Split", 1.5, team_2_score)) %>%
+
+    mutate(team_1_score = if_else(projection_1 == "Team 2" & projection_2 == "Team 2", 0, team_1_score)) %>%
+    mutate(team_2_score = if_else(projection_1 == "Team 2" & projection_2 == "Team 2", 2, team_2_score)) %>%
+
+    mutate(team_1_score = team_1_score*n) %>%
+    mutate(team_2_score = team_2_score*n) %>%
+    ungroup() %>%
+    summarise(
+      team_1_score = sum(team_1_score),
+      team_2_score = sum(team_2_score)
+    )
+
+
+
+
+
+}
+
 ##########################
 ### MEMEBER MANAGEMENT ###
 ##########################
