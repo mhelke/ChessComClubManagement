@@ -811,18 +811,50 @@ getUsersToInvite <- function(club_id,
 
 
 
-getGameStatsForPlayers <- function(user_id) {
+getGameStatsForPlayers <- function(user_id, year, month) {
+
+  # TODO: Conside this endpoint instead? https://api.chess.com/pub/player/{username}/matches
+
+  baseUrl <- "https://api.chess.com/pub/player/"
+  endpoint <- paste0(baseUrl, user_id, "/games/", year, "/", month, sep = "", collapse = NULL)
+
+  player_games_raw <- tryCatch(
+    fromJSON(toString(endpoint), flatten = TRUE),
+    error = function(e) {
+      # Sometimes aborted matches are included from the API. Ignore these.
+      warning(paste("Games cannot be found"))
+      print(e)
+      #return(empty_tibble)
+    },
+    warning = function(w) {
+      warning(paste("Games cannot be found"))
+      print(w)
+      #return(empty_tibble)
+    }
+  )
+
+  # Get the games
+  player_games <- player_games_raw$games
+
+  # Filter out daily games and opponent stats
+  player_stats <- player_games %>%
+    filter(time_class == "daily") %>%
+    mutate(color = if_else(tolower(white.username) == tolower(user_id), "w", "b")) %>%
+    mutate(username = if_else(color == "w", white.username, black.username)) %>%
+    mutate(result = if_else(color == "w", white.result, black.result)) %>%
+    select(username, result, time_control, match, tournament)
 
 
-  # call archive API
-
-  # get stats for each player
-
-  # Only want daily games
-
-  # filter on month, match/tournament, lost by timeout, total games etc.
-
-  # return decided on results
+  # Filter for match timeouts
+  player_match_results <- player_stats %>%
+    filter(!is.na(match)) %>%
+    filter(result == "timeout") %>%
+    select(-tournament) %>%
+    group_by(time_control) %>%
+    summarise(
+      username = user_id,
+      match_timeouts = n()
+    )
 
 }
 
