@@ -805,6 +805,36 @@ getUsersToInvite <- function(club_id,
 }
 
 
+
+
+
+
+
+
+getGameStatsForPlayers <- function(user_id) {
+
+
+  # call archive API
+
+  # get stats for each player
+
+  # Only want daily games
+
+  # filter on month, match/tournament, lost by timeout, total games etc.
+
+  # return decided on results
+
+}
+
+
+
+
+
+
+
+
+
+
 ################################
 ### Private Helper Functions ###
 ################################
