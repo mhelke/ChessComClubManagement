@@ -811,51 +811,104 @@ getUsersToInvite <- function(club_id,
 
 
 
-getGameStatsForPlayers <- function(user_id, year, month) {
+getGameStatsForPlayers <- function(user_id, year, month, nmonths) {
 
-  # TODO: Conside this endpoint instead? https://api.chess.com/pub/player/{username}/matches
+  user_id <- 'czenluvsyou'
+  month <- 4
+  year <- 2023
+  nmonths = 3
 
   baseUrl <- "https://api.chess.com/pub/player/"
-  endpoint <- paste0(baseUrl, user_id, "/games/", year, "/", month, sep = "", collapse = NULL)
+  JSON_url <- vector(mode = "character", nmonths)
 
-  player_games_raw <- tryCatch(
-    fromJSON(toString(endpoint), flatten = TRUE),
-    error = function(e) {
-      # Sometimes aborted matches are included from the API. Ignore these.
-      warning(paste("Games cannot be found"))
-      print(e)
-      #return(empty_tibble)
-    },
-    warning = function(w) {
-      warning(paste("Games cannot be found"))
-      print(w)
-      #return(empty_tibble)
+  # Fetches the data from the chess.com public API
+  if (!is.null(nmonths) & nmonths != 1) {
+
+    i <- 1
+    while (nmonths!=0) {
+
+      # Increment the year and provide the correct month
+      if (month == 13) {
+        month <- 1
+        year <- year + 1
+      }
+
+      # A 0 is added to the month to create a double digit number, required by the API
+      if (month < 10) {
+        JSON_url[i] <- paste0(baseUrl, user_id, "/games/", year, "/0", month,
+                              sep = "", collapse = NULL)
+      } else {
+        JSON_url[i] <- paste0(baseUrl, user_id, "/games/", year, "/", month,
+                              sep = "", collapse = NULL)
+      } # end else months >= 10
+
+      month <- month + 1
+      nmonths <- nmonths - 1
+      i <- i + 1
     }
-  )
+  } else {
+    if(month < 10){
+      JSON_url[1] <- paste0(baseUrl, user_id, "/games/", year, "/0", month,
+                            sep = "", collapse = NULL)
+    } else {
+      JSON_url[1] <- paste0(baseUrl, user_id, "/games/", year, "/", month,
+                            sep = "", collapse = NULL)
 
-  # Get the games
-  player_games <- player_games_raw$games
+    } # end else months >= 10
+  } # end else
+
+
+   all_player_games <- data.frame()
+
+cols <- c("url", "pgn", "time_control", "end_time", "rated", "tcn", "uuid", "initial_setup", "fen","time_class", "rules", "start_time", "match", "tournament", "white.rating",
+          "white.result", "white.@id", "white.username", "white.uuid", "black.rating", "black.result", "black.@id", "black.username", "black.uuid",
+          "accuracies.white", "accuracies.black")
+
+  for (url in JSON_url) {
+    player_games_raw <- tryCatch(
+      fromJSON(toString(url), flatten = TRUE),
+      error = function(e) {
+        warning(paste("Games cannot be found"))
+        print(e)
+      },
+      warning = function(w) {
+        warning(paste("Games cannot be found"))
+        print(w)
+      }
+    )
+
+    player_games <- player_games_raw$games
+
+    player_games <- .add_cols(player_games, cols)
+    ncol(player_games)
+    all_player_games <- all_player_games %>%
+      rbind(player_games)
+  }
 
   # Filter out daily games and opponent stats
-  player_stats <- player_games %>%
+  player_stats <- all_player_games %>%
     filter(time_class == "daily") %>%
     mutate(color = if_else(tolower(white.username) == tolower(user_id), "w", "b")) %>%
     mutate(username = if_else(color == "w", white.username, black.username)) %>%
     mutate(result = if_else(color == "w", white.result, black.result)) %>%
     select(username, result, time_control, match, tournament)
 
-
   # Filter for match timeouts
-  player_match_results <- player_stats %>%
-    filter(!is.na(match)) %>%
-    filter(result == "timeout") %>%
-    select(-tournament) %>%
-    group_by(time_control) %>%
+  results <- player_stats %>%
+    mutate(event = if_else(!is.na(match), "match", "")) %>%
+    mutate(event = if_else(!is.na(tournament), "tournament", event)) %>%
+    filter(event == "match" | event == "tournament") %>%
+    mutate(time_control = substring(time_control, 3)) %>%
+    mutate(time_control = as.numeric(time_control)/(60*60*24)) %>%
+    group_by(time_control, event) %>%
     summarise(
       username = user_id,
-      match_timeouts = n()
+      timeouts = n()
     )
 
+  results
+
+  return(results)
 }
 
 
