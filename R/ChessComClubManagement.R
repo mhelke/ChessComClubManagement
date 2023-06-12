@@ -892,7 +892,6 @@ getGameStatsForPlayer <- function(user_id, year, month, nmonths) {
     }
   }
 
-
   all_player_games <- data.frame()
 
   cols <-
@@ -940,8 +939,9 @@ getGameStatsForPlayer <- function(user_id, year, month, nmonths) {
 
     player_games <- player_games_raw$games
 
+    # The match and tournament columns are only included when not NA
     player_games <- .add_cols(player_games, cols)
-    ncol(player_games)
+
     all_player_games <- all_player_games %>%
       rbind(player_games)
   }
@@ -969,7 +969,9 @@ getGameStatsForPlayer <- function(user_id, year, month, nmonths) {
       )
     ) %>%
     filter(event == "match" | event == "tournament") %>%
+    # Daily games are given in the format for 1/<seconds>
     mutate(time_control = substring(time_control, 3)) %>%
+    # Convert seconds to days
     mutate(time_control = as.numeric(time_control) / (60 * 60 * 24)) %>%
     group_by(time_control, event, result) %>%
     summarise(username = user_id,

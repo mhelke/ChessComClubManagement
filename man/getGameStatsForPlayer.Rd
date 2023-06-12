@@ -5,7 +5,7 @@
 getGameStatsForPlayer(user_id, year, month, nmonths)
 }
 \description{
-Query a player's game archive to find all match and tournament games. Returns athe number of daily game for each grouping of event type, time control, and result.
+Query a player's game archive to find all match and tournament games. Returns the number of daily game for each grouping of event type, time control, and result.
 The year and month parameters refer to the month to start with and nmonths is how many total months to query.
 }
 \examples{
