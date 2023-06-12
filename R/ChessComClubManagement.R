@@ -567,7 +567,7 @@ getUserStats <- function(user_id) {
 }
 
 #' @description Returns relevant stats for all club members
-#' @param user_id ID of the club you want stats for
+#' @param user_id ID of the user you want stats for
 #' @return Tibble of relevant user stats for club management: Username, joined chess.com date, last online date, country, daily standard and 960 ratings, time per move, and timeout percent
 #' @source chess.com public API
 #' @export
@@ -664,6 +664,7 @@ convertCountryCode <- function(countryEndpoint) {
 #' @param min_months_account_age The minimum age of the user's account
 #' @param min_days_last_online The number of days ago since the user was last online
 #' @param country The country code on the user's profile. Each country has a 2 character code assigned by chess.com
+#' @source Chess.com public API
 #' @return Data frame of ideal players within a given club
 #' @export
 getUsersToInvite <- function(club_id,
@@ -804,29 +805,30 @@ getUsersToInvite <- function(club_id,
   return(invites)
 }
 
+#' @description Returns the daily game results for a user in different event types and time controls
+#' @param user_id ID of the user you want stats for
+#' @param year Which year to start querying the user's archive from
+#' @param month Which month to start querying the user's archive from
+#' @param nmonths The number of months to query the archives
+#' @return Tibble of the number of games for a user for each event type/time control/result grouping
+#' @source chess.com public API
+#' @export
+getGameStatsForPlayer <- function(user_id, year, month, nmonths) {
 
-
-
-
-
-
-
-getGameStatsForPlayers <- function(user_id, year, month, nmonths) {
-
-  user_id <- 'czenluvsyou'
-  month <- 4
+  # TODO: Remove test code --
+  user_id <- 'mastermatthew52'
+  month <- 3
   year <- 2023
-  nmonths = 3
+  nmonths = 4
+  # ----
 
   baseUrl <- "https://api.chess.com/pub/player/"
   JSON_url <- vector(mode = "character", nmonths)
 
   # Fetches the data from the chess.com public API
   if (!is.null(nmonths) & nmonths != 1) {
-
     i <- 1
-    while (nmonths!=0) {
-
+    while (nmonths != 0) {
       # Increment the year and provide the correct month
       if (month == 13) {
         month <- 1
@@ -835,34 +837,93 @@ getGameStatsForPlayers <- function(user_id, year, month, nmonths) {
 
       # A 0 is added to the month to create a double digit number, required by the API
       if (month < 10) {
-        JSON_url[i] <- paste0(baseUrl, user_id, "/games/", year, "/0", month,
-                              sep = "", collapse = NULL)
+        JSON_url[i] <-
+          paste0(
+            baseUrl,
+            user_id,
+            "/games/",
+            year,
+            "/0",
+            month,
+            sep = "",
+            collapse = NULL
+          )
       } else {
-        JSON_url[i] <- paste0(baseUrl, user_id, "/games/", year, "/", month,
-                              sep = "", collapse = NULL)
-      } # end else months >= 10
+        JSON_url[i] <- paste0(
+          baseUrl,
+          user_id,
+          "/games/",
+          year,
+          "/",
+          month,
+          sep = "",
+          collapse = NULL
+        )
+      }
 
       month <- month + 1
       nmonths <- nmonths - 1
       i <- i + 1
     }
   } else {
-    if(month < 10){
-      JSON_url[1] <- paste0(baseUrl, user_id, "/games/", year, "/0", month,
-                            sep = "", collapse = NULL)
+    if (month < 10) {
+      JSON_url[1] <-
+        paste0(
+          baseUrl,
+          user_id,
+          "/games/",
+          year,
+          "/0",
+          month,
+          sep = "",
+          collapse = NULL
+        )
     } else {
-      JSON_url[1] <- paste0(baseUrl, user_id, "/games/", year, "/", month,
-                            sep = "", collapse = NULL)
+      JSON_url[1] <- paste0(
+        baseUrl,
+        user_id,
+        "/games/",
+        year,
+        "/",
+        month,
+        sep = "",
+        collapse = NULL
+      )
+    }
+  }
 
-    } # end else months >= 10
-  } # end else
 
+  all_player_games <- data.frame()
 
-   all_player_games <- data.frame()
-
-cols <- c("url", "pgn", "time_control", "end_time", "rated", "tcn", "uuid", "initial_setup", "fen","time_class", "rules", "start_time", "match", "tournament", "white.rating",
-          "white.result", "white.@id", "white.username", "white.uuid", "black.rating", "black.result", "black.@id", "black.username", "black.uuid",
-          "accuracies.white", "accuracies.black")
+  cols <-
+    c(
+      "url",
+      "pgn",
+      "time_control",
+      "end_time",
+      "rated",
+      "tcn",
+      "uuid",
+      "initial_setup",
+      "fen",
+      "time_class",
+      "rules",
+      "start_time",
+      "match",
+      "tournament",
+      "white.rating",
+      "white.result",
+      "white.@id",
+      "white.username",
+      "white.uuid",
+      "black.rating",
+      "black.result",
+      "black.@id",
+      "black.username",
+      "black.uuid",
+      "accuracies.white",
+      "accuracies.black"
+    )
 
   for (url in JSON_url) {
     player_games_raw <- tryCatch(
@@ -893,32 +954,29 @@ cols <- c("url", "pgn", "time_control", "end_time", "rated", "tcn", "uuid", "ini
     mutate(result = if_else(color == "w", white.result, black.result)) %>%
     select(username, result, time_control, match, tournament)
 
-  # Filter for match timeouts
+  # Filter for match/tournament timeouts
   results <- player_stats %>%
     mutate(event = if_else(!is.na(match), "match", "")) %>%
     mutate(event = if_else(!is.na(tournament), "tournament", event)) %>%
+    mutate(
+      result = if_else(
+        result == "agreed" |
+          result == "repetition" |
+          result == "stalemate" |
+          result == "insufficient" | result == "50move",
+        "draw",
+        result
+      )
+    ) %>%
     filter(event == "match" | event == "tournament") %>%
     mutate(time_control = substring(time_control, 3)) %>%
-    mutate(time_control = as.numeric(time_control)/(60*60*24)) %>%
-    group_by(time_control, event) %>%
-    summarise(
-      username = user_id,
-      timeouts = n()
-    )
-
-  results
+    mutate(time_control = as.numeric(time_control) / (60 * 60 * 24)) %>%
+    group_by(time_control, event, result) %>%
+    summarise(username = user_id,
+              total_games = n())
 
   return(results)
 }
-
-
-
-
-
-
-
-
-
 
 ################################
 ### Private Helper Functions ###
