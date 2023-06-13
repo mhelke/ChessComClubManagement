@@ -813,14 +813,6 @@ getUsersToInvite <- function(club_id,
 #' @source chess.com public API
 #' @export
 getGameStatsForPlayer <- function(user_id, year, month, nmonths) {
-
-  # TODO: Remove test code --
-  user_id <- 'mastermatthew52'
-  month <- 3
-  year <- 2023
-  nmonths = 4
-  # ----
-
   baseUrl <- "https://api.chess.com/pub/player/"
   JSON_url <- vector(mode = "character", nmonths)
 
