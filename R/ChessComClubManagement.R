@@ -813,6 +813,12 @@ getUsersToInvite <- function(club_id,
 #' @source chess.com public API
 #' @export
 getGameStatsForPlayer <- function(user_id, year, month, nmonths) {
+
+#  user_id = "jaydadgt"
+#  year = 2023
+#  month = 4
+#  nmonths = 3
+
   baseUrl <- "https://api.chess.com/pub/player/"
   JSON_url <- vector(mode = "character", nmonths)
 
@@ -928,10 +934,12 @@ getGameStatsForPlayer <- function(user_id, year, month, nmonths) {
       }
     )
 
-    player_games <- player_games_raw$games
+    player_games <- player_games_raw$games %>% as_tibble()
 
     # The match and tournament columns are only included when not NA
     player_games <- .add_cols(player_games, cols)
+    player_games <- player_games %>%
+      select(all_of(cols))
 
     all_player_games <- all_player_games %>%
       rbind(player_games)
