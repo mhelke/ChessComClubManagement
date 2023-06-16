@@ -257,7 +257,8 @@ getPlayersToRemoveFromMatch <-
            max_timeouts,
            min_total_games) {
     if (is.na(match_id) |
-        is.na(club_id) | is.na(max_timeouts) | is.na(min_total_games)) {
+        is.na(club_id) |
+        is.na(max_timeouts) | is.na(min_total_games)) {
       stop("Error: Parameters cannot be NA")
     }
 
@@ -769,7 +770,10 @@ getAllGamesForPlayer <- function(user_id, year, month, nmonths) {
     mutate(color = if_else(tolower(white.username) == tolower(user_id), "w", "b")) %>%
     mutate(username = if_else(color == "w", white.username, black.username)) %>%
     mutate(result = if_else(color == "w", white.result, black.result)) %>%
-    select(-white.username, -black.username, -white.result, -black.result) %>%
+    select(-white.username,
+           -black.username,
+           -white.result,
+           -black.result) %>%
     # Daily games are given in the format for 1/<seconds>
     mutate(time_control = substring(time_control, 3)) %>%
     # Convert seconds to days
@@ -939,7 +943,7 @@ getUsersToInvite <- function(club_id,
   if (!is.na(country_code)) {
     start <- count(invites)
     invites <- invites %>%
-      filter(grepl(country_code, str_sub(country,-2,-1), ignore.case = TRUE))
+      filter(grepl(country_code, str_sub(country, -2, -1), ignore.case = TRUE))
 
     change <- start - count(invites)
     message(paste0(
