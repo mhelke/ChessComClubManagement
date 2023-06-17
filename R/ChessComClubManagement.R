@@ -787,10 +787,11 @@ getAllGamesForPlayer <- function(user_id, year, month, nmonths) {
 #' @param year Which year to start querying the user's archive from
 #' @param month Which month to start querying the user's archive from
 #' @param nmonths The number of months to query the archives
+#' @param include_vacation Boolean for whether to check the player's tournament games for vacation rules
 #' @return Tibble of the number of games for a user for each event type/time control/result grouping
 #' @source chess.com public API
 #' @export
-getGameResultsForPlayer <- function(user_id, year, month, nmonths) {
+getGameResultsForPlayer <- function(user_id, year, month, nmonths, include_vacation = FALSE) {
   player_stats <- getAllGamesForPlayer(user_id, year, month, nmonths)
 
   # Filter for match/tournament timeouts
@@ -808,13 +809,44 @@ getGameResultsForPlayer <- function(user_id, year, month, nmonths) {
         result
       )
     ) %>%
-    filter(event == "match" | event == "tournament") %>%
+    filter(event == "match" | event == "tournament")
 
-    group_by(time_control, event, result) %>%
+  # Check the tournaments endpoint
+  if (include_vacation) {
+    results <- results %>%
+      mutate(vacation = sapply(tournament, .getTournament)) %>%
+      mutate(vacation = if_else(event == "match", TRUE, vacation))
+  }
+
+  results <- results %>%
+    group_by(time_control, event, result, vacation) %>%
     summarise(username = user_id,
               total_games = n())
 
   return(results)
+}
+
+.getTournament <- function(endpoint) {
+  message(paste0("Fetching tournament details"))
+  results <- tryCatch(
+    fromJSON(toString(endpoint), flatten = TRUE),
+    error = function(e) {
+      warning("Failed to fetch tournament info")
+      print(e)
+      return(NA)
+    },
+    warning = function(w) {
+      warning("Failed to fetch tournament info")
+      print(w)
+      return(NA)
+    }
+  )
+
+  if(class(results) != "list") {
+    return(NA)
+  }
+
+  return(results$settings$allow_vacation)
 }
 
 #' @description Calls the chess.com country API to get the country name. Provided only for convenience since all returns by default will not convert the country
