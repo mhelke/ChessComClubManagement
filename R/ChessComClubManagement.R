@@ -811,11 +811,16 @@ getGameResultsForPlayer <- function(user_id, year, month, nmonths, include_vacat
     ) %>%
     filter(event == "match" | event == "tournament")
 
+
+
   # Check the tournaments endpoint
-  if (include_vacation) {
+  if (include_vacation & nrow(results) > 0) {
     results <- results %>%
       mutate(vacation = sapply(tournament, .getTournament)) %>%
       mutate(vacation = if_else(event == "match", TRUE, vacation))
+  } else {
+    results <- results %>%
+      mutate(vacation = NA)
   }
 
   results <- results %>%
