@@ -257,7 +257,8 @@ getPlayersToRemoveFromMatch <-
            max_timeouts,
            min_total_games) {
     if (is.na(match_id) |
-        is.na(club_id) | is.na(max_timeouts) | is.na(min_total_games)) {
+        is.na(club_id) |
+        is.na(max_timeouts) | is.na(min_total_games)) {
       stop("Error: Parameters cannot be NA")
     }
 
@@ -314,7 +315,6 @@ getPlayersToRemoveFromMatch <-
         timeout_percent,
         total_games
       )
-
 
     return(removals)
   }
@@ -567,7 +567,7 @@ getUserStats <- function(user_id) {
 }
 
 #' @description Returns relevant stats for all club members
-#' @param user_id ID of the club you want stats for
+#' @param user_id ID of the user you want stats for
 #' @return Tibble of relevant user stats for club management: Username, joined chess.com date, last online date, country, daily standard and 960 ratings, time per move, and timeout percent
 #' @source chess.com public API
 #' @export
@@ -624,6 +624,236 @@ getAllMemberStats <- function(club_id) {
   return(user_details)
 }
 
+#' @description Fetches a player's daily games from the archive
+#' @param user_id ID of the user you want stats for
+#' @param year Which year to start querying the user's archive from
+#' @param month Which month to start querying the user's archive from
+#' @param nmonths The number of months to query the archives
+#' @return All daily games for a player
+#' @note Use `getGameResultsForPlayer` to get the game results grouped by type
+#' @seealso `getGameResultsForPlayer`
+getAllGamesForPlayer <- function(user_id, year, month, nmonths) {
+  baseUrl <- "https://api.chess.com/pub/player/"
+  JSON_url <- vector(mode = "character", nmonths)
+
+  # Fetches the data from the chess.com public API
+  if (!is.null(nmonths) & nmonths != 1) {
+    i <- 1
+    while (nmonths != 0) {
+      # Increment the year and provide the correct month
+      if (month == 13) {
+        month <- 1
+        year <- year + 1
+      }
+
+      # A 0 is added to the month to create a double digit number, required by the API
+      if (month < 10) {
+        JSON_url[i] <-
+          paste0(
+            baseUrl,
+            user_id,
+            "/games/",
+            year,
+            "/0",
+            month,
+            sep = "",
+            collapse = NULL
+          )
+      } else {
+        JSON_url[i] <- paste0(
+          baseUrl,
+          user_id,
+          "/games/",
+          year,
+          "/",
+          month,
+          sep = "",
+          collapse = NULL
+        )
+      }
+
+      month <- month + 1
+      nmonths <- nmonths - 1
+      i <- i + 1
+    }
+  } else {
+    if (month < 10) {
+      JSON_url[1] <-
+        paste0(
+          baseUrl,
+          user_id,
+          "/games/",
+          year,
+          "/0",
+          month,
+          sep = "",
+          collapse = NULL
+        )
+    } else {
+      JSON_url[1] <- paste0(
+        baseUrl,
+        user_id,
+        "/games/",
+        year,
+        "/",
+        month,
+        sep = "",
+        collapse = NULL
+      )
+    }
+  }
+
+  all_player_games <- data.frame()
+
+  cols <-
+    c(
+      "url",
+      "pgn",
+      "time_control",
+      "end_time",
+      "rated",
+      "tcn",
+      "uuid",
+      "initial_setup",
+      "fen",
+      "time_class",
+      "rules",
+      "start_time",
+      "match",
+      "tournament",
+      "white.rating",
+      "white.result",
+      "white.@id",
+      "white.username",
+      "white.uuid",
+      "black.rating",
+      "black.result",
+      "black.@id",
+      "black.username",
+      "black.uuid",
+      "accuracies.white",
+      "accuracies.black"
+    )
+
+  i <- 1
+  total_months <- length(JSON_url)
+  for (url in JSON_url) {
+    message(paste0(i, "/", total_months, " Fetching games for user ", user_id))
+    player_games_raw <- tryCatch(
+      fromJSON(toString(url), flatten = TRUE),
+      error = function(e) {
+        warning(paste("Games cannot be found"))
+        print(e)
+      },
+      warning = function(w) {
+        warning(paste("Games cannot be found"))
+        print(w)
+      }
+    )
+
+    player_games <- player_games_raw$games %>% as_tibble()
+
+    # The match and tournament columns are only included when not NA
+    player_games <- .add_cols(player_games, cols)
+    player_games <- player_games %>%
+      select(all_of(cols))
+
+    all_player_games <- all_player_games %>%
+      rbind(player_games)
+
+    i <- i + 1
+  }
+
+  # Filter by daily games and opponent stats
+  player_stats <- all_player_games %>%
+    filter(time_class == "daily") %>%
+    mutate(color = if_else(tolower(white.username) == tolower(user_id), "w", "b")) %>%
+    mutate(username = if_else(color == "w", white.username, black.username)) %>%
+    mutate(result = if_else(color == "w", white.result, black.result)) %>%
+    select(-white.username,
+           -black.username,
+           -white.result,
+           -black.result) %>%
+    # Daily games are given in the format for 1/<seconds>
+    mutate(time_control = substring(time_control, 3)) %>%
+    # Convert seconds to days
+    mutate(time_control = as.numeric(time_control) / (60 * 60 * 24))
+
+  return(player_stats)
+}
+
+#' @description Returns the daily game results for a user in different event types and time controls
+#' @param user_id ID of the user you want stats for
+#' @param year Which year to start querying the user's archive from
+#' @param month Which month to start querying the user's archive from
+#' @param nmonths The number of months to query the archives
+#' @param include_vacation Boolean for whether to check the player's tournament games for vacation rules
+#' @return Tibble of the number of games for a user for each event type/time control/result grouping
+#' @source chess.com public API
+#' @export
+getGameResultsForPlayer <- function(user_id, year, month, nmonths, include_vacation = FALSE) {
+  player_stats <- getAllGamesForPlayer(user_id, year, month, nmonths)
+
+  # Filter for match/tournament timeouts
+  results <- player_stats %>%
+    select(username, result, time_control, match, tournament) %>%
+    mutate(event = if_else(!is.na(match), "match", "")) %>%
+    mutate(event = if_else(!is.na(tournament), "tournament", event)) %>%
+    mutate(
+      result = if_else(
+        result == "agreed" |
+          result == "repetition" |
+          result == "stalemate" |
+          result == "insufficient" | result == "50move",
+        "draw",
+        result
+      )
+    ) %>%
+    filter(event == "match" | event == "tournament")
+
+
+
+  # Check the tournaments endpoint
+  if (include_vacation & nrow(results) > 0) {
+    results <- results %>%
+      mutate(vacation = sapply(tournament, .getTournament)) %>%
+      mutate(vacation = if_else(event == "match", TRUE, vacation))
+  } else {
+    results <- results %>%
+      mutate(vacation = NA)
+  }
+
+  results <- results %>%
+    group_by(time_control, event, result, vacation) %>%
+    summarise(username = user_id,
+              total_games = n())
+
+  return(results)
+}
+
+.getTournament <- function(endpoint) {
+  message(paste0("Fetching tournament details"))
+  results <- tryCatch(
+    fromJSON(toString(endpoint), flatten = TRUE),
+    error = function(e) {
+      warning("Failed to fetch tournament info")
+      print(e)
+      return(NA)
+    },
+    warning = function(w) {
+      warning("Failed to fetch tournament info")
+      print(w)
+      return(NA)
+    }
+  )
+
+  if(class(results) != "list") {
+    return(NA)
+  }
+
+  return(results$settings$allow_vacation)
+}
+
 #' @description Calls the chess.com country API to get the country name. Provided only for convenience since all returns by default will not convert the country
 #' @param countryEndpoint the URL for the chess.com country API
 #' @return The name of the country
@@ -664,6 +894,7 @@ convertCountryCode <- function(countryEndpoint) {
 #' @param min_months_account_age The minimum age of the user's account
 #' @param min_days_last_online The number of days ago since the user was last online
 #' @param country The country code on the user's profile. Each country has a 2 character code assigned by chess.com
+#' @source Chess.com public API
 #' @return Data frame of ideal players within a given club
 #' @export
 getUsersToInvite <- function(club_id,
@@ -749,7 +980,7 @@ getUsersToInvite <- function(club_id,
   if (!is.na(country_code)) {
     start <- count(invites)
     invites <- invites %>%
-      filter(grepl(country_code, str_sub(country,-2,-1), ignore.case = TRUE))
+      filter(grepl(country_code, str_sub(country, -2, -1), ignore.case = TRUE))
 
     change <- start - count(invites)
     message(paste0(
@@ -803,7 +1034,6 @@ getUsersToInvite <- function(club_id,
   }
   return(invites)
 }
-
 
 ################################
 ### Private Helper Functions ###
