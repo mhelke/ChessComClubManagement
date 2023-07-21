@@ -903,6 +903,7 @@ getUsersToInvite <- function(club_id,
                              min_games = 0,
                              min_months_account_age = 0,
                              min_days_last_online = NA,
+                             min_rating = 0,
                              country_code = NA) {
   # Verify given data is accurate
   if (nchar(country_code) != 2 & !is.na(country_code)) {
@@ -1003,6 +1004,21 @@ getUsersToInvite <- function(club_id,
       change,
       " players on minimum games played requirement of ",
       min_games
+    )
+  )
+
+  # Min rating
+  start <- count(invites)
+  invites <- invites %>%
+    filter(daily_rating >= min_rating)
+
+  change <- start - count(invites)
+  message(
+    paste0(
+      "Dropped ",
+      change,
+      " players on minimum rating requirement of ",
+      min_rating
     )
   )
 
