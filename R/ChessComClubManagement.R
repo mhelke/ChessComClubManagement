@@ -452,7 +452,9 @@ getUserStats <- function(user_id) {
         return(NA)
       }
     )
-  user_profile <- as.data.frame(user_profile)
+  user_profile <-
+    as.data.frame(user_profile) %>%
+    .add_cols(cols = c("name"))
 
   baseUrl <- "https://api.chess.com/pub/player/"
   endpoint <-
@@ -554,6 +556,7 @@ getUserStats <- function(user_id) {
     select(
       username,
       url,
+      name,
       joined_site,
       last_online,
       country,
@@ -575,6 +578,7 @@ getAllMemberStats <- function(club_id) {
   user_details <- data.frame(
     username = character(),
     url = character(),
+    name = character(),
     joined_club = numeric(),
     joined_site = numeric(),
     last_online = numeric(),
@@ -585,6 +589,8 @@ getAllMemberStats <- function(club_id) {
     timeout_percent = numeric(),
     activity = character()
   )
+
+  column_names <- colnames(user_details)
 
   all_members <- getAllClubMembers(club_id)
   user_ids <- all_members$username
@@ -609,6 +615,7 @@ getAllMemberStats <- function(club_id) {
     select(
       username,
       url,
+      name,
       joined_club,
       joined_site,
       last_online,
