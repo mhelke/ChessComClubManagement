@@ -746,10 +746,7 @@ getAllGamesForPlayer <- function(user_id, year, month, nmonths) {
     mutate(color = if_else(tolower(white.username) == tolower(user_id), "w", "b")) %>%
     mutate(username = if_else(color == "w", white.username, black.username)) %>%
     mutate(result = if_else(color == "w", white.result, black.result)) %>%
-    select(-white.username,
-           -black.username,
-           -white.result,
-           -black.result) %>%
+    select(-white.username,-black.username,-white.result,-black.result) %>%
     # Daily games are given in the format for 1/<seconds>
     mutate(time_control = substring(time_control, 3)) %>%
     # Convert seconds to days
@@ -767,45 +764,50 @@ getAllGamesForPlayer <- function(user_id, year, month, nmonths) {
 #' @return Tibble of the number of games for a user for each event type/time control/result grouping
 #' @source chess.com public API
 #' @export
-getGameResultsForPlayer <- function(user_id, year, month, nmonths, include_vacation = FALSE) {
-  player_stats <- getAllGamesForPlayer(user_id, year, month, nmonths)
+getGameResultsForPlayer <-
+  function(user_id,
+           year,
+           month,
+           nmonths,
+           include_vacation = FALSE) {
+    player_stats <- getAllGamesForPlayer(user_id, year, month, nmonths)
 
-  # Filter for match/tournament timeouts
-  results <- player_stats %>%
-    select(username, result, time_control, match, tournament) %>%
-    mutate(event = if_else(!is.na(match), "match", "")) %>%
-    mutate(event = if_else(!is.na(tournament), "tournament", event)) %>%
-    mutate(
-      result = if_else(
-        result == "agreed" |
-          result == "repetition" |
-          result == "stalemate" |
-          result == "insufficient" | result == "50move",
-        "draw",
-        result
-      )
-    ) %>%
-    filter(event == "match" | event == "tournament")
+    # Filter for match/tournament timeouts
+    results <- player_stats %>%
+      select(username, result, time_control, match, tournament) %>%
+      mutate(event = if_else(!is.na(match), "match", "")) %>%
+      mutate(event = if_else(!is.na(tournament), "tournament", event)) %>%
+      mutate(
+        result = if_else(
+          result == "agreed" |
+            result == "repetition" |
+            result == "stalemate" |
+            result == "insufficient" | result == "50move",
+          "draw",
+          result
+        )
+      ) %>%
+      filter(event == "match" | event == "tournament")
 
 
 
-  # Check the tournaments endpoint
-  if (include_vacation & nrow(results) > 0) {
+    # Check the tournaments endpoint
+    if (include_vacation & nrow(results) > 0) {
+      results <- results %>%
+        mutate(vacation = sapply(tournament, .getTournament)) %>%
+        mutate(vacation = if_else(event == "match", TRUE, vacation))
+    } else {
+      results <- results %>%
+        mutate(vacation = NA)
+    }
+
     results <- results %>%
-      mutate(vacation = sapply(tournament, .getTournament)) %>%
-      mutate(vacation = if_else(event == "match", TRUE, vacation))
-  } else {
-    results <- results %>%
-      mutate(vacation = NA)
+      group_by(time_control, event, result, vacation) %>%
+      summarise(username = user_id,
+                total_games = n())
+
+    return(results)
   }
-
-  results <- results %>%
-    group_by(time_control, event, result, vacation) %>%
-    summarise(username = user_id,
-              total_games = n())
-
-  return(results)
-}
 
 .getTournament <- function(endpoint) {
   cli_inform("Fetching tournament details")
@@ -821,7 +823,7 @@ getGameResultsForPlayer <- function(user_id, year, month, nmonths, include_vacat
     }
   )
 
-  if(class(results) != "list") {
+  if (class(results) != "list") {
     return(NA)
   }
 
@@ -880,10 +882,8 @@ getUsersToInvite <- function(club_id,
   # Verify given data is accurate
   if (nchar(country_code) != 2 & !is.na(country_code)) {
     cli_abort(
-      c(
-        "Invalid country code: `{country_code}`.",
-        "i" = "Please find the correct country code here: https://www.chess.com/news/view/published-data-api#pubapi-endpoint-country"
-      )
+      c("Invalid country code: `{country_code}`.",
+        "i" = "Please find the correct country code here: https://www.chess.com/news/view/published-data-api#pubapi-endpoint-country")
     )
   }
 
@@ -924,14 +924,16 @@ getUsersToInvite <- function(club_id,
       filter(last_online >= ymd(Sys.Date()) - days(min_days_last_online))
 
     change <- start - count(invites)
-    cli_alert_info("Dropped {change} players on min days last online requirement of {min_days_last_online}")
+    cli_alert_info(
+      "Dropped {change} players on min days last online requirement of {min_days_last_online}"
+    )
   }
 
   # Country code
   if (!is.na(country_code)) {
     start <- count(invites)
     invites <- invites %>%
-      filter(grepl(country_code, str_sub(country, -2, -1), ignore.case = TRUE))
+      filter(grepl(country_code, str_sub(country,-2,-1), ignore.case = TRUE))
 
     change <- start - count(invites)
     cli_alert_info("Dropped {change} players on country requirement of {country_code}")
@@ -963,7 +965,9 @@ getUsersToInvite <- function(club_id,
 
   final_count <- count(invites)
   if (final_count == 0) {
-    cli_warn(c("No players meet the given criteria!", "i" = "Try modifying the parameters and try again"))
+    cli_warn(
+      c("No players meet the given criteria!", "i" = "Try modifying the parameters and try again")
+    )
   } else {
     cli_alert_success("Returning {final_count} players that meet the given criteria")
   }
