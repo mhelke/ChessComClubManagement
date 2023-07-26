@@ -553,9 +553,11 @@ getUserStats <- function(user_id) {
     ) %>%
     mutate(joined_site = as_datetime(joined_site)) %>%
     mutate(last_online = as_datetime(last_online)) %>%
+    mutate(displayUsername = tail(unlist(strsplit(url, "/")), 1)) %>%
     select(
       username,
       url,
+      displayUsername,
       name,
       joined_site,
       last_online,
@@ -578,6 +580,7 @@ getAllMemberStats <- function(club_id) {
   user_details <- data.frame(
     username = character(),
     url = character(),
+    displayUsername = character(),
     name = character(),
     joined_club = numeric(),
     joined_site = numeric(),
@@ -615,6 +618,7 @@ getAllMemberStats <- function(club_id) {
     select(
       username,
       url,
+      displayUsername,
       name,
       joined_club,
       joined_site,
