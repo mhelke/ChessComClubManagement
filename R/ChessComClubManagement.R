@@ -995,6 +995,14 @@ getUsersToInvite <- function(club_id,
 #### All Member Data Report ####
 ################################
 
+#' @description Fetches stats and team match performance data for all members of a club and returns a full, clean report.
+#' @param club_id ID of the club you want the member report for
+#' @param include_finished Include finished matches in the data
+#' @param include_in_progress Include in-progress matches in the data
+#' @param include_upcoming Include finished matches in the data
+#' @param nDays The number of days back to look for matches by start time
+#' @param convert_country Boolean indicating if the country code should be converted. If TRUE, the country name is included in the data, but it will increase execution time.
+#' @return Tibble of club member data
 getMemberDataReport <- function(club_id,
                                 include_finished_matches,
                                 include_in_progress_matches,
