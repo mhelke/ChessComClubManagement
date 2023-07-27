@@ -28,7 +28,8 @@ getMatchDetailsForMatches <- function(club_id, match_ids) {
 
   total_matches <- length(match_ids)
   i <- 1
-  cli_progress_bar("Fetching matches for `{club_id}`", total = length(match_ids))
+  cli_alert("Fetching {total_matches} matches")
+  cli_progress_bar("Fetching matches...", total = total_matches)
   for (match in match_ids) {
     details <- .getMatchDetails(club_id, match)
     match_details <- match_details %>% rbind(details)
@@ -70,7 +71,7 @@ getMatchIds <-
       match_id <- url_elements %>% last()
       match_ids <- append(match_ids, match_id)
     }
-    cli_alert_success("Finished fetching {length(match_ids)} matches")
+    cli_alert_success("Finished fetching {total_matches} matches")
     return(match_ids)
   }
 
@@ -237,7 +238,6 @@ getMatchResults <- function(club_id) {
     arrange(desc(matches_played))
 
   return(matches)
-
 }
 
 #' @description Retrieves players registered for a match that are ineligible to participate
@@ -266,7 +266,6 @@ getPlayersToRemoveFromMatch <-
       cli_abort("{.var min_total_games} cannot be NA")
     }
 
-
     match_details <- getMatchDetailsForMatches(club_id, match_id)
 
     players <- match_details$username
@@ -293,7 +292,8 @@ getPlayersToRemoveFromMatch <-
 
     i <- 1
 
-    cli_progress_bar("Fetching stats for {total_players} users", total = total_players)
+    cli_alert("Fetching stats for {total_players} users")
+    cli_progress_bar("Fetching stats...", total = total_players)
     for (player in players) {
       stats <- getUserStats(user_id = player)
       user_details <- user_details %>% rbind(stats)
@@ -575,7 +575,8 @@ getAllMemberStats <- function(club_id) {
 
   total_users <- length(user_ids)
   i <- 1
-  cli_progress_bar("Fetching stats for {total_users} users", total = total_users)
+  cli_alert("Fetching stats for {total_users} users")
+  cli_progress_bar("Fetching stats...", total = total_users)
   for (user_id in user_ids) {
     details <- getUserStats(user_id)
     if (class(details) == "data.frame") {
@@ -723,7 +724,8 @@ getAllGamesForPlayer <- function(user_id, year, month, nmonths) {
   i <- 1
   total_months <- length(JSON_url)
   cli_alert_info("Fetching games for `{user_id}`")
-  cli_progress_bar("Fetching data...", total = length(JSON_url))
+  cli_alert("Fetching games from past {total_months} months")
+  cli_progress_bar("Fetching games...", total = total_months)
 
   for (url in JSON_url) {
     player_games_raw <- tryCatch(
