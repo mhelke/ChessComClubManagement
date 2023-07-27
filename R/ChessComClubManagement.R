@@ -1186,8 +1186,9 @@ getUsersToInvite <- function(club_id,
         "0.5",
         played_as_black
       )) %>%
-      mutate(played_as_white = as.numeric(played_as_white)) %>%
-      mutate(played_as_black = as.numeric(played_as_black))
+      # Suppress warnings for 'NAs introduced by coercion'. NAs indicate in-progress games.
+      mutate(played_as_white = suppressWarnings(as.numeric(played_as_white))) %>%
+      mutate(played_as_black = suppressWarnings(as.numeric(played_as_black)))
 
     # Drop the link to player stats API and member status columns.
     my_team_players <- my_team_players %>%
