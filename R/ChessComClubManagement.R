@@ -760,7 +760,10 @@ getAllGamesForPlayer <- function(user_id, year, month, nmonths) {
     mutate(color = if_else(tolower(white.username) == tolower(user_id), "w", "b")) %>%
     mutate(username = if_else(color == "w", white.username, black.username)) %>%
     mutate(result = if_else(color == "w", white.result, black.result)) %>%
-    select(-white.username,-black.username,-white.result,-black.result) %>%
+    select(-white.username,
+           -black.username,
+           -white.result,
+           -black.result) %>%
     # Daily games are given in the format for 1/<seconds>
     mutate(time_control = substring(time_control, 3)) %>%
     # Convert seconds to days
@@ -947,7 +950,7 @@ getUsersToInvite <- function(club_id,
   if (!is.na(country_code)) {
     start <- count(invites)
     invites <- invites %>%
-      filter(grepl(country_code, str_sub(country,-2,-1), ignore.case = TRUE))
+      filter(grepl(country_code, str_sub(country, -2, -1), ignore.case = TRUE))
 
     change <- start - count(invites)
     cli_alert_info("Dropped {change} players on country requirement of {country_code}")
@@ -998,29 +1001,28 @@ getMemberDataReport <- function(club_id,
                                 include_upcoming_matches,
                                 nDays = NA,
                                 convert_country = FALSE) {
-
-
   # Verify given data is accurate
 
   if (is.na(club_id)) {
-    cli_abort(
-      c("{.var club_id} cannot be NA",
-        "i" = "Please provide a valid club ID")
-    )
+    cli_abort(c("{.var club_id} cannot be NA",
+                "i" = "Please provide a valid club ID"))
   }
-  if (is.na(include_finished_matches) || !is.logical(include_finished_matches)) {
+  if (is.na(include_finished_matches) ||
+      !is.logical(include_finished_matches)) {
     cli_abort(
       c("{.var include_finished_matches} must be a logical",
         "i" = "Provide `TRUE` or `FALSE`")
     )
   }
-  if (is.na(include_in_progress_matches) || !is.logical(include_in_progress_matches)) {
+  if (is.na(include_in_progress_matches) ||
+      !is.logical(include_in_progress_matches)) {
     cli_abort(
       c("{.var include_in_progress_matches} must be a logical",
         "i" = "Provide `TRUE` or `FALSE`")
     )
   }
-  if (is.na(include_upcoming_matches) || !is.logical(include_upcoming_matches)) {
+  if (is.na(include_upcoming_matches) ||
+      !is.logical(include_upcoming_matches)) {
     cli_abort(
       c("{.var include_upcoming_matches} must be a logical",
         "i" = "Provide `TRUE` or `FALSE`")
@@ -1036,14 +1038,12 @@ getMemberDataReport <- function(club_id,
     nDays = 90
   )
 
-  match_details_raw <- getMatchDetailsForMatches(
-    club_id,
-    all_match_ids
-  ) %>% as.data.frame()
+  match_details_raw <- getMatchDetailsForMatches(club_id,
+                                                 all_match_ids) %>% as.data.frame()
 
   match_details <- match_details_raw %>%
     mutate(in_progress = if_else(is.na(played_as_white), 1, 0)) %>%
-    mutate(in_progress = if_else(is.na(played_as_black), in_progress+1, in_progress)) %>%
+    mutate(in_progress = if_else(is.na(played_as_black), in_progress + 1, in_progress)) %>%
     mutate(played_as_white = if_else(is.na(played_as_white), 0, played_as_white)) %>%
     mutate(played_as_black = if_else(is.na(played_as_black), 0, played_as_black)) %>%
     group_by(username) %>%
@@ -1053,8 +1053,15 @@ getMemberDataReport <- function(club_id,
       total_wins = sum(played_as_white) + sum(played_as_black),
       total_in_progress = sum(in_progress)
     ) %>%
-    mutate(total_losses = (total_matches_entered*2) - total_wins - total_in_progress) %>%
-    select(username, total_matches_entered, total_timeouts, total_wins, total_losses, total_in_progress)
+    mutate(total_losses = (total_matches_entered * 2) - total_wins - total_in_progress) %>%
+    select(
+      username,
+      total_matches_entered,
+      total_timeouts,
+      total_wins,
+      total_losses,
+      total_in_progress
+    )
 
   user_stats <- getAllMemberStats(club_id)
 
@@ -1071,9 +1078,9 @@ getMemberDataReport <- function(club_id,
   all_member_deails_clean <- all_member_deails_clean %>%
     filter(!is.na(joined_club)) %>% # If joined club is NA, the user is no longer a member of the club
     mutate(total_matches_entered = if_else(is.na(total_matches_entered), 0, total_matches_entered)) %>%
-    mutate(total_timeouts = if_else(is.na(total_timeouts ), 0, total_timeouts )) %>%
-    mutate(total_wins = if_else(is.na(total_wins ), 0, total_wins )) %>%
-    mutate(total_losses = if_else(is.na(total_losses ), 0, total_losses )) %>%
+    mutate(total_timeouts = if_else(is.na(total_timeouts), 0, total_timeouts)) %>%
+    mutate(total_wins = if_else(is.na(total_wins), 0, total_wins)) %>%
+    mutate(total_losses = if_else(is.na(total_losses), 0, total_losses)) %>%
     mutate(total_in_progress = if_else(is.na(total_in_progress), 0, total_in_progress)) %>%
     mutate(name = if_else(is.na(name), "", name)) %>%
     mutate(joined_club = as.Date(joined_club)) %>%
