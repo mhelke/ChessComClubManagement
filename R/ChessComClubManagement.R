@@ -440,7 +440,9 @@ getUserStats <- function(user_id) {
         return(NA)
       }
     )
-  user_profile <- as.data.frame(user_profile)
+  user_profile <-
+    as.data.frame(user_profile) %>%
+    .add_cols(cols = c("name"))
 
   baseUrl <- "https://api.chess.com/pub/player/"
   endpoint <-
@@ -525,9 +527,12 @@ getUserStats <- function(user_id) {
     ) %>%
     mutate(joined_site = as_datetime(joined_site)) %>%
     mutate(last_online = as_datetime(last_online)) %>%
+    mutate(displayUsername = tail(unlist(strsplit(url, "/")), 1)) %>%
     select(
       username,
       url,
+      displayUsername,
+      name,
       joined_site,
       last_online,
       country,
@@ -549,6 +554,8 @@ getAllMemberStats <- function(club_id) {
   user_details <- data.frame(
     username = character(),
     url = character(),
+    displayUsername = character(),
+    name = character(),
     joined_club = numeric(),
     joined_site = numeric(),
     last_online = numeric(),
@@ -559,6 +566,8 @@ getAllMemberStats <- function(club_id) {
     timeout_percent = numeric(),
     activity = character()
   )
+
+  column_names <- colnames(user_details)
 
   all_members <- getAllClubMembers(club_id)
   user_ids <- all_members$username
@@ -582,6 +591,8 @@ getAllMemberStats <- function(club_id) {
     select(
       username,
       url,
+      displayUsername,
+      name,
       joined_club,
       joined_site,
       last_online,
@@ -1090,8 +1101,9 @@ getUsersToInvite <- function(club_id,
         "0.5",
         played_as_black
       )) %>%
-      mutate(played_as_white = as.numeric(played_as_white)) %>%
-      mutate(played_as_black = as.numeric(played_as_black))
+      # Suppress warnings for 'NAs introduced by coercion'. NAs indicate in-progress games.
+      mutate(played_as_white = suppressWarnings(as.numeric(played_as_white))) %>%
+      mutate(played_as_black = suppressWarnings(as.numeric(played_as_black)))
 
     # Drop the link to player stats API and member status columns.
     my_team_players <- my_team_players %>%
