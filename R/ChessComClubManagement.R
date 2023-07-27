@@ -989,6 +989,102 @@ getUsersToInvite <- function(club_id,
 }
 
 ################################
+#### All Member Data Report ####
+################################
+
+getMemberDataReport <- function(club_id,
+                                include_finished_matches,
+                                include_in_progress_matches,
+                                include_upcoming_matches,
+                                nDays = NA,
+                                convert_country = FALSE) {
+
+
+  # Verify given data is accurate
+
+  if (is.na(club_id)) {
+    cli_abort(
+      c("{.var club_id} cannot be NA",
+        "i" = "Please provide a valid club ID")
+    )
+  }
+  if (is.na(include_finished_matches) || !is.logical(include_finished_matches)) {
+    cli_abort(
+      c("{.var include_finished_matches} must be a logical",
+        "i" = "Provide `TRUE` or `FALSE`")
+    )
+  }
+  if (is.na(include_in_progress_matches) || !is.logical(include_in_progress_matches)) {
+    cli_abort(
+      c("{.var include_in_progress_matches} must be a logical",
+        "i" = "Provide `TRUE` or `FALSE`")
+    )
+  }
+  if (is.na(include_upcoming_matches) || !is.logical(include_upcoming_matches)) {
+    cli_abort(
+      c("{.var include_upcoming_matches} must be a logical",
+        "i" = "Provide `TRUE` or `FALSE`")
+    )
+  }
+
+  # Fetch match data
+  all_match_ids <- getMatchIds(
+    club_id,
+    include_finished = include_finished_matches,
+    include_in_progress = include_in_progress_matches,
+    include_upcoming = include_upcoming_matches,
+    nDays = 90
+  )
+
+  match_details_raw <- getMatchDetailsForMatches(
+    club_id,
+    all_match_ids
+  ) %>% as.data.frame()
+
+  match_details <- match_details_raw %>%
+    mutate(in_progress = if_else(is.na(played_as_white), 1, 0)) %>%
+    mutate(in_progress = if_else(is.na(played_as_black), in_progress+1, in_progress)) %>%
+    mutate(played_as_white = if_else(is.na(played_as_white), 0, played_as_white)) %>%
+    mutate(played_as_black = if_else(is.na(played_as_black), 0, played_as_black)) %>%
+    group_by(username) %>%
+    summarise(
+      total_matches_entered = n(),
+      total_timeouts = sum(time_out_count),
+      total_wins = sum(played_as_white) + sum(played_as_black),
+      total_in_progress = sum(in_progress)
+    ) %>%
+    mutate(total_losses = (total_matches_entered*2) - total_wins - total_in_progress) %>%
+    select(username, total_matches_entered, total_timeouts, total_wins, total_losses, total_in_progress)
+
+  user_stats <- getAllMemberStats(club_id)
+
+  all_member_deails_clean <- user_stats %>%
+    full_join(match_details, by = "username")
+
+  # The user API returns an endpoint for the country. Need to fetch the country name separately.
+  if (convert_country) {
+    all_member_deails_clean <- all_member_deails_clean %>%
+      mutate(country = sapply(country, convertCountryCode))
+  }
+
+  # Clean up data
+  all_member_deails_clean <- all_member_deails_clean %>%
+    filter(!is.na(joined_club)) %>% # If joined club is NA, the user is no longer a member of the club
+    mutate(total_matches_entered = if_else(is.na(total_matches_entered), 0, total_matches_entered)) %>%
+    mutate(total_timeouts = if_else(is.na(total_timeouts ), 0, total_timeouts )) %>%
+    mutate(total_wins = if_else(is.na(total_wins ), 0, total_wins )) %>%
+    mutate(total_losses = if_else(is.na(total_losses ), 0, total_losses )) %>%
+    mutate(total_in_progress = if_else(is.na(total_in_progress), 0, total_in_progress)) %>%
+    mutate(name = if_else(is.na(name), "", name)) %>%
+    mutate(joined_club = as.Date(joined_club)) %>%
+    mutate(joined_club = as.Date(joined_site)) %>%
+    mutate(joined_club = as.Date(last_online))
+
+  cli_alert_success("Done generating member data report")
+  return(all_member_deails_clean)
+}
+
+################################
 ### Private Helper Functions ###
 ################################
 
