@@ -266,6 +266,7 @@ getPlayersToRemoveFromMatch <-
       cli_abort("{.var min_total_games} cannot be NA")
     }
 
+
     match_details <- getMatchDetailsForMatches(club_id, match_id)
 
     players <- match_details$username
