@@ -1074,30 +1074,27 @@ getMemberDataReport <- function(club_id,
 
   user_stats <- getAllMemberStats(club_id)
 
-  all_member_deails_clean <- user_stats %>%
+  all_member_details_clean <- user_stats %>%
     full_join(match_details, by = "username")
 
   # The user API returns an endpoint for the country. Need to fetch the country name separately.
   if (convert_country) {
-    all_member_deails_clean <- all_member_deails_clean %>%
+    all_member_details_clean <- all_member_details_clean %>%
       mutate(country = sapply(country, convertCountryCode))
   }
 
   # Clean up data
-  all_member_deails_clean <- all_member_deails_clean %>%
+  all_member_details_clean <- all_member_details_clean %>%
     filter(!is.na(joined_club)) %>% # If joined club is NA, the user is no longer a member of the club
     mutate(total_matches_entered = if_else(is.na(total_matches_entered), 0, total_matches_entered)) %>%
     mutate(total_timeouts = if_else(is.na(total_timeouts), 0, total_timeouts)) %>%
     mutate(total_wins = if_else(is.na(total_wins), 0, total_wins)) %>%
     mutate(total_losses = if_else(is.na(total_losses), 0, total_losses)) %>%
     mutate(total_in_progress = if_else(is.na(total_in_progress), 0, total_in_progress)) %>%
-    mutate(name = if_else(is.na(name), "", name)) %>%
-    mutate(joined_club = as.Date(joined_club)) %>%
-    mutate(joined_club = as.Date(joined_site)) %>%
-    mutate(joined_club = as.Date(last_online))
+    mutate(name = if_else(is.na(name), "", name))
 
   cli_alert_success("Done generating member data report")
-  return(all_member_deails_clean)
+  return(all_member_details_clean)
 }
 
 ################################
