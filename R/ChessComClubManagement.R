@@ -6,6 +6,7 @@
 require(tidyverse)
 require(jsonlite)
 require(dplyr)
+require(cli)
 
 ########################
 ### MATCH MANAGEMENT ###
