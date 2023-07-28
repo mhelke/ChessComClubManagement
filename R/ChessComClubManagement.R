@@ -6,6 +6,7 @@
 require(tidyverse)
 require(jsonlite)
 require(dplyr)
+require(cli)
 
 ########################
 ### MATCH MANAGEMENT ###
@@ -1043,7 +1044,7 @@ getMemberDataReport <- function(club_id,
     include_finished = include_finished_matches,
     include_in_progress = include_in_progress_matches,
     include_upcoming = include_upcoming_matches,
-    nDays = 90
+    nDays = nDays
   )
 
   match_details_raw <- getMatchDetailsForMatches(club_id,
