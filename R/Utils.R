@@ -126,6 +126,9 @@
 }
 
 .getTournament <- function(endpoint) {
+  if (is.na(endpoint)) {
+    return(NA)
+  }
   cli_inform("Fetching tournament details")
   results <- .fetch(endpoint)
   if (class(results) != "list") {

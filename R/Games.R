@@ -125,13 +125,13 @@ getAllGamesForPlayer <- function(user_id, year, month, nmonths) {
   cli_progress_bar("Fetching games...", total = total_months)
 
   for (url in JSON_url) {
-    player_games_raw <- .fetch(url)
+    player_games_raw <- fromJSON(JSON_url[1], flatten = TRUE)
     if (class(player_games_raw) != "list") {
       cli_warn("Games cannot be found for user {user_id} for {month}/{year}.")
       next
     }
 
-    player_games <- player_games_raw$games %>% as_tibble()
+    player_games <- player_games_raw$games
 
     # The match and tournament columns are only included when not NA
     player_games <- .add_cols(player_games, cols)
