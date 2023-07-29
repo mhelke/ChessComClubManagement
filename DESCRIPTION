@@ -4,11 +4,7 @@ Title: Retrieve data for a chess.com club
 Version: 1.2.0
 Author: Matthew Helke
 Maintainer: Matthew Helke <matthewhelke52@gmail.com>
-Description: Retrieve cleaned data for any chess.com club.
-    - Retrieve member details
-    - Retrieve team match details
-    - Retrieve all time team match leaderboard
-    - Retrieve users who qualify to join a club or match based on a set of criteria
+Description: Retrieve cleaned data for any chess.com club. Retrieve member details, team match details, all time team match leaderboard, users who qualify to join a club or match based on a set of criteria.
 Notice: Due to the chess.com public API temporarily only returning the most recent 500 completed team matches, the leaderboard and stats returned for matches may not be accurate for all clubs. 
 Imports:
   dplyr,
@@ -17,7 +13,7 @@ Imports:
   stringr,
   RcppSimdJson,
   lubridate
-License: MIT
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.2.3
