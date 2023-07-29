@@ -131,7 +131,7 @@ getAllGamesForPlayer <- function(user_id, year, month, nmonths) {
       next
     }
 
-    player_games <- player_games_raw$games
+    player_games <- player_games_raw$games %>% as_tibble()
 
     # The match and tournament columns are only included when not NA
     player_games <- .add_cols(player_games, cols)
