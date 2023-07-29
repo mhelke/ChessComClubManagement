@@ -31,7 +31,8 @@ getUsersToInvite <- function(club_id,
   if (nchar(country_code) != 2 & !is.na(country_code)) {
     cli_abort(
       c("Invalid country code: `{country_code}`.",
-        "i" = "Please find the correct country code here: https://www.chess.com/news/view/published-data-api#pubapi-endpoint-country")
+        "i" = "Please find the correct country code here: https://www.chess.com/news/view/published-data-api#pubapi-endpoint-country"
+      )
     )
   }
 
@@ -81,7 +82,7 @@ getUsersToInvite <- function(club_id,
   if (!is.na(country_code)) {
     start <- count(invites)
     invites <- invites %>%
-      filter(grepl(country_code, str_sub(country,-2,-1), ignore.case = TRUE))
+      filter(grepl(country_code, str_sub(country, -2, -1), ignore.case = TRUE))
 
     change <- start - count(invites)
     cli_alert_info("Dropped {change} players on country requirement of {country_code}")

@@ -118,9 +118,8 @@
         board,
         time_out_count
       ))
-
   } else {
-    my_team_players = empty_tibble
+    my_team_players <- empty_tibble
     cli_warn("Could not find team for `{club_id}` for match `{match_id}`")
   }
   return(my_team_players)
@@ -139,13 +138,14 @@
 # Checks the data frame for the provided columns.If they do not exist, they're added and filled with NA values.
 .add_cols <- function(df, cols) {
   add <- cols[!cols %in% names(df)]
-  if (length(add) != 0)
+  if (length(add) != 0) {
     df[add] <- NA
+  }
   return(df)
 }
 
 .getId <- function(url) {
-  url_elements <- url %>% str_split_1('/')
+  url_elements <- url %>% str_split_1("/")
   id <- url_elements %>% last()
   return(id)
 }

@@ -18,10 +18,11 @@ getAllMembersByActivity <- function(club_id) {
   baseUrl <- "https://api.chess.com/pub/club/"
   endpoint <-
     paste0(baseUrl,
-           club_id,
-           "/members",
-           sep = "",
-           collapse = NULL)
+      club_id,
+      "/members",
+      sep = "",
+      collapse = NULL
+    )
   member_activity_raw <- .fetch(endpoint)
   if (class(member_activity_raw) != "list") {
     cli_abort("Members for club `{club_id}` cannot be found")
@@ -125,10 +126,11 @@ getUserStats <- function(user_id) {
   baseUrl <- "https://api.chess.com/pub/player/"
   endpoint <-
     paste0(baseUrl,
-           user_id,
-           "/stats",
-           sep = "",
-           collapse = NULL)
+      user_id,
+      "/stats",
+      sep = "",
+      collapse = NULL
+    )
 
   user_stats_raw <- .fetch(endpoint)
   if (class(user_stats_raw) != "list") {
@@ -136,7 +138,7 @@ getUserStats <- function(user_id) {
     return(NA)
   }
 
-  user_stats_unlisted <- unlist(user_stats_raw , use.names = TRUE)
+  user_stats_unlisted <- unlist(user_stats_raw, use.names = TRUE)
 
   user_stats <- as.data.frame(t(user_stats_unlisted))
   seconds_in_hour <- 60 * 60
@@ -229,9 +231,9 @@ getAllMemberStats <- function(club_id) {
     joined_site = numeric(),
     last_online = numeric(),
     country = character(),
-    daily_rating  = numeric(),
-    daily_960_rating  = numeric(),
-    time_per_move  = numeric(),
+    daily_rating = numeric(),
+    daily_960_rating = numeric(),
+    time_per_move = numeric(),
     timeout_percent = numeric(),
     activity = character()
   )
