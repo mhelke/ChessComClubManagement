@@ -1,22 +1,24 @@
-##############################################
-###         Required Imports              ####
-### Must be installed to use this package ####
-##############################################
+###############
+### Imports ###
+###############
 
-require(tidyverse)
-require(dplyr)
-require(cli)
-require(httr)
-require(RcppSimdJson)
+#' @import dplyr
+#' @import cli
+#' @importFrom httr GET
+#' @importFrom RcppSimdJson fparse
+#' @importFrom stringr str_split_1
+#' @importFrom lubridate as_datetime ymd
 
 ########################
 ### MATCH MANAGEMENT ###
 ########################
 
-#' @description Collects the details of the specified team matches into a tibble
+#' @name getMatchDetailsForMatches
+#' @title Get details for club matches
+#' @description Fetches match data for the given list of team matches for a particular club Id.
 #' @param club_id ID of the club you want matches details for
 #' @param match_ids List of IDs of the matches you want details for
-#' @return Tibble of all specified match data
+#' @returns Tibble of all specified match data
 #' @source chess.com public API
 #' @export
 getMatchDetailsForMatches <- function(club_id, match_ids) {
@@ -41,12 +43,16 @@ getMatchDetailsForMatches <- function(club_id, match_ids) {
   return(match_details)
 }
 
-#' @description Retrieves IDs of matches for the given club
+#' @name getMatchIds
+#' @title Get the Daily Match Ids for a given club
+#' @description Fetches the daily match Ids for the given club and returns a list of Ids.
+#' You can specify which match status to include (finished, in-progress, and upcoming) as well as the number of days in the past the match started.
+#' A value of nDays = NA will return all matches that are available from the chess.com API.
 #' @param club_id ID of the club you want match IDs for
 #' @param include_finished Returns finished match IDs
 #' @param include_in_progress Returns in-progress match IDs
 #' @param include_upcoming Returns upcoming match IDs
-#' @return List of match IDs
+#' @returns List of match IDs
 #' @source chess.com public API
 #' @export
 getMatchIds <-
@@ -75,13 +81,17 @@ getMatchIds <-
     return(match_ids)
   }
 
-#' @description Retrieves the URLs of matches for the given club
-#' @note Use `getMatchIds` to retrieve only the IDs of the match.
+#' @name getMatchUrls
+#' @title Get the API URLs of matches for a given club
+#' @description Fetches the URLs for the given club and returns a list of URLs.
+#' You can specify which match status to include (finished, in-progress, and upcoming) as well as the number of days in the past the match started.
+#' A value of nDays = NA will return all match URLs that are available from the chess.com API.
 #' @param club_id ID of the club you want match URLs for
 #' @param include_finished Returns finished match URLs
 #' @param include_in_progress Returns in-progress match URLs
 #' @param include_upcoming Returns upcoming match URLs
-#' @return List of match URLs
+#' @returns List of match URLs
+#' @seealso [getMatchIds()]
 #' @source chess.com public API
 #' @export
 getMatchUrls <-
@@ -147,9 +157,12 @@ getMatchUrls <-
     return(matches)
   }
 
-#' @description Retrieves the all time stats from team matches and creates a leader board
+#' @name getAllTimeLeaderBoard
+#' @title Get All Time Leaderboard for Team Matches
+#' @description Fetches the record of match results for all players who have ever played a match for the club and are currently members of the club.
+#' Note: chess.com is temporarily limiting finished matches to the most recent 500 due to performance.
 #' @param club_id ID of the club you want the leader board for
-#' @return A Tibble of club members who have participated in matches and their all-time records
+#' @returns A Tibble of club members who have participated in matches and their all-time records
 #' @note Chess.com public API only returns the most recent 500 completed matches due to performance issues. Until that is resolved by the chess.com team, this function may NOT return the all-time stats and results may not be accurate for all clubs.
 #' @source chess.com public API
 #' @export
@@ -185,9 +198,11 @@ getAllTimeLeaderBoard <- function(club_id) {
   return(all_time_match_results)
 }
 
-#' @description Retrieves the record of the given club against all clubs played in team matches
+#' @name getMatchResults
+#' @title Get the results of team matches against other clubs
+#' @description Fetches the completed team matches and returns a the given club's record against other clubs.
 #' @param club_id ID of the club you want the results for
-#' @return A Tibble of the club's team match record versus other clubs
+#' @returns A Tibble of the club's team match record versus other clubs
 #' @note Chess.com public API only returns the most recent 500 completed matches due to performance issues. Until that is resolved by the chess.com team, this function may NOT return all the clubs ever played.
 #' @source chess.com public API
 #' @export
@@ -224,12 +239,14 @@ getMatchResults <- function(club_id) {
   return(matches)
 }
 
+#' @name getPlayersToRemoveFromMatch
+#' @title Get a list of users ineligible to participate in a given match
 #' @description Retrieves players registered for a match that are ineligible to participate
 #' @param match_id ID of the match to manage
 #' @param club_id ID of the club you manage
 #' @param max_timeouts The maximum timeout percentage allowed for participation
 #' @param min_total_games The minimum number of completed games allowed for participation
-#' @return A list of players ineligible to participate in the match, filtered by the provided criteria
+#' @returns A list of players ineligible to participate in the match, filtered by the provided criteria
 #' @source chess.com public API
 #' @export
 getPlayersToRemoveFromMatch <-
@@ -310,10 +327,12 @@ getPlayersToRemoveFromMatch <-
 ### MEMEBER MANAGEMENT ###
 ##########################
 
-#' @description Retrieves all members of a given club
+#' @name getAllMembersByActivity
+#' @title Get All Club Members By Activity
+#' @description Fetches all club members sorted by activity level (weekly, monthly, all-time (inactive) for the given club
 #' @param club_id ID of the club you want the list of members for
-#' @return A list of members grouped by activity level (weekly, monthly,  all-time (inactive))
-#' @seealso `getAllClubMembers` which returns the same data already merged into one table
+#' @returns A list of members grouped by activity level (weekly, monthly,  all-time (inactive))
+#' @seealso [getAllClubMembers] which returns the same data already merged into one table
 #' @source chess.com public API
 #' @export
 getAllMembersByActivity <- function(club_id) {
@@ -334,9 +353,11 @@ getAllMembersByActivity <- function(club_id) {
   return(member_activity_raw)
 }
 
-#' @description Retrieves all members of a given club
+#' @name getAllClubMembers
+#' @title Get All Club Members
+#' @description Fetches all club members for the given club and returns the usernames and dates they joined the club.
 #' @param club_id ID of the club you want the members of
-#' @return A Tibble of all members in the club and their join date
+#' @returns A Tibble of all members in the club and their join date
 #' @source chess.com public API
 #' @export
 getAllClubMembers <- function(club_id) {
@@ -366,14 +387,20 @@ getAllClubMembers <- function(club_id) {
   return(all_club_members)
 }
 
+#' @name getInactiveMatchPlayers
+#' @title Find players who have not played a match in the past n days
 #' @description Calculates which members have not joined a team match in the past 90 days
 #' @param club_id ID of the club you want the list of inactive members for
-#' @return Tibble of members who have not joined a match in 90 days along with the date they joined the club
+#' @param nDays The number of days the user has been inactive
+#' @returns Tibble of members who have not joined a match in the past n days along with the date they joined the club
 #' @source chess.com public API
 #' @export
-getInactiveMatchPlayers <- function(club_id) {
+getInactiveMatchPlayers <- function(club_id, nDays = 90) {
   # Get all match Ids
-  all_match_ids <- getMatchIds(club_id)
+  all_match_ids <- getMatchIds(
+    club_id,
+    nDays = nDays
+  )
 
   all_match_details_raw <-
     getMatchDetailsForMatches(club_id, all_match_ids)
@@ -384,7 +411,7 @@ getInactiveMatchPlayers <- function(club_id) {
 
   all_club_members <- getAllClubMembers(club_id)
 
-  no_matches_past_90_days <- all_club_members %>%
+  no_matches_past_n_days <- all_club_members %>%
     anti_join(all_players_in_matches, by = "username") %>%
     arrange(joined) %>%
     mutate(joined = format(
@@ -392,12 +419,14 @@ getInactiveMatchPlayers <- function(club_id) {
       "%m/%d/%Y"
     ))
 
-  return(no_matches_past_90_days)
+  return(no_matches_past_n_days)
 }
 
+#' @name getUserStats
+#' @title Get Stats for a Given User
 #' @description Returns relevant stats for a user
 #' @param user_id ID of the user you want stats for
-#' @return One row tibble of relevant user stats for club management: Username, joined chess.com date, last online date, country, daily standard and 960 ratings, time per move, and timeout percent
+#' @returns One row tibble of relevant user stats for club management: Username, joined chess.com date, last online date, country, daily standard and 960 ratings, time per move, and timeout percent
 #' @source chess.com public API
 #' @export
 getUserStats <- function(user_id) {
@@ -504,9 +533,12 @@ getUserStats <- function(user_id) {
   return(user_clean_stats)
 }
 
-#' @description Returns relevant stats for all club members
+#' @name getAllMemberStats
+#' @title Get Stats for all Users in the Given Club
+#' @description Fetches relevant stats for all users in the given club.
 #' @param user_id ID of the user you want stats for
-#' @return Tibble of relevant user stats for club management: Username, joined chess.com date, last online date, country, daily standard and 960 ratings, time per move, and timeout percent
+#' @returns Tibble of relevant user stats for club management:
+#' Username, joined chess.com date, last online date, country, daily standard and 960 ratings, time per move, and timeout percent
 #' @source chess.com public API
 #' @export
 getAllMemberStats <- function(club_id) {
@@ -567,14 +599,17 @@ getAllMemberStats <- function(club_id) {
   return(user_details)
 }
 
+#' @name getAllGamesForPlayer
+#' @title Get the stats on the timeouts for a player
 #' @description Fetches a player's daily games from the archive
 #' @param user_id ID of the user you want stats for
 #' @param year Which year to start querying the user's archive from
 #' @param month Which month to start querying the user's archive from
 #' @param nmonths The number of months to query the archives
-#' @return All daily games for a player
-#' @note Use `getGameResultsForPlayer` to get the game results grouped by type
-#' @seealso `getGameResultsForPlayer`
+#' @returns All daily games for a player
+#' @source chess.com public API
+#' @seealso [getGameResultsForPlayer()] `getGameResultsForPlayer`
+#' @export
 getAllGamesForPlayer <- function(user_id, year, month, nmonths) {
   baseUrl <- "https://api.chess.com/pub/player/"
   JSON_url <- vector(mode = "character", nmonths)
@@ -720,13 +755,15 @@ getAllGamesForPlayer <- function(user_id, year, month, nmonths) {
   return(player_stats)
 }
 
-#' @description Returns the daily game results for a user in different event types and time controls
+#' @name getGameResultsForPlayer
+#' @title Get the results and the timeouts of daily games for a player
+#' @description Query a player's game archive to find all match and tournament games
 #' @param user_id ID of the user you want stats for
 #' @param year Which year to start querying the user's archive from
 #' @param month Which month to start querying the user's archive from
 #' @param nmonths The number of months to query the archives
 #' @param include_vacation Boolean for whether to check the player's tournament games for vacation rules
-#' @return Tibble of the number of games for a user for each event type/time control/result grouping
+#' @returns Tibble of the number of games for a user for each event type/time control/result grouping
 #' @source chess.com public API
 #' @export
 getGameResultsForPlayer <-
@@ -784,9 +821,16 @@ getGameResultsForPlayer <-
   return(results$settings$allow_vacation)
 }
 
-#' @description Calls the chess.com country API to get the country name. Provided only for convenience since all returns by default will not convert the country
+#' @name convertCountryCode
+#' @title Convert the Country Code from User Stats
+#' @description Calls the chess.com country API to get the country name. Provided only for convenience since all returns by default will not convert the country.
 #' @param countryEndpoint the URL for the chess.com country API
-#' @return The name of the country
+#' @returns The name of the country
+#' @examples
+#' member_data %>%
+#'  mutate(
+#'   country = sapply(country, convertCountryCode)
+#'  )
 #' @source chess.com public API
 #' @export
 convertCountryCode <- function(countryEndpoint) {
@@ -807,6 +851,8 @@ convertCountryCode <- function(countryEndpoint) {
 ### Invite Management ###
 #########################
 
+#' @name getUsersToInvite
+#' @title Get a list of users to invite to your club
 #' @description Get a list of ideal players within a given club based on provided parameters
 #' @param club_id ID of the club you want to invite members from
 #' @param max_timeout The maximum allowed timeout percentage required to participate
@@ -815,8 +861,8 @@ convertCountryCode <- function(countryEndpoint) {
 #' @param min_months_account_age The minimum age of the user's account
 #' @param min_days_last_online The number of days ago since the user was last online
 #' @param country The country code on the user's profile. Each country has a 2 character code assigned by chess.com
+#' @returns Data frame of ideal players within a given club
 #' @source Chess.com public API
-#' @return Data frame of ideal players within a given club
 #' @export
 getUsersToInvite <- function(club_id,
                              max_timeout = NA,
@@ -925,12 +971,7 @@ getUsersToInvite <- function(club_id,
 ### Private Helper Functions ###
 ################################
 
-#' @description Collects the details of the specified team match into a tibble
-#' @param club_id ID of the club you want match details for
-#' @param match_id ID of the match you want details for
-#' @note Use `getMatchDetailsForMatches` to fetch match details
-#' @return Tibble of match data
-#' @seealso `getMatchDetailsForMatches`
+# Collects the details of the specified team match into a tibble
 .getMatchDetails <- function(club_id, match_id) {
   empty_tibble <- tibble(
     username = character(),
