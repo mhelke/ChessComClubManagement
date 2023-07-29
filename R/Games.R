@@ -152,7 +152,7 @@ getAllGamesForPlayer <- function(user_id, year, month, nmonths) {
     mutate(color = if_else(tolower(white.username) == tolower(user_id), "w", "b")) %>%
     mutate(username = if_else(color == "w", white.username, black.username)) %>%
     mutate(result = if_else(color == "w", white.result, black.result)) %>%
-    select(-white.username,-black.username,-white.result,-black.result) %>%
+    select(-white.username, -black.username, -white.result, -black.result) %>%
     # Daily games are given in the format for 1/<seconds>
     mutate(time_control = substring(time_control, 3)) %>%
     # Convert seconds to days
@@ -211,8 +211,10 @@ getGameResultsForPlayer <-
 
     results <- results %>%
       group_by(time_control, event, result, vacation) %>%
-      summarise(username = user_id,
-                total_games = n())
+      summarise(
+        username = user_id,
+        total_games = n()
+      )
 
     return(results)
   }

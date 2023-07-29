@@ -57,18 +57,20 @@ getMatchIds <-
            include_upcoming = TRUE,
            nDays = NA) {
     all_matches <-
-      getMatchUrls(club_id,
-                   include_finished,
-                   include_in_progress,
-                   include_upcoming,
-                   nDays)
+      getMatchUrls(
+        club_id,
+        include_finished,
+        include_in_progress,
+        include_upcoming,
+        nDays
+      )
 
     total_matches <- length(all_matches)
     match_ids <-
       vector(mode = "character")
 
     for (match in all_matches) {
-      url_elements <- match %>% str_split_1('/')
+      url_elements <- match %>% str_split_1("/")
       match_id <- url_elements %>% last()
       match_ids <- append(match_ids, match_id)
     }
@@ -102,10 +104,11 @@ getMatchUrls <-
     baseUrl <- "https://api.chess.com/pub/club/"
     endpoint <-
       paste0(baseUrl,
-             club_id,
-             "/matches",
-             sep = "",
-             collapse = NULL)
+        club_id,
+        "/matches",
+        sep = "",
+        collapse = NULL
+      )
 
     club_matches_raw <- .fetch(endpoint)
     if (class(club_matches_raw) != "list") {
@@ -210,10 +213,11 @@ getMatchResults <- function(club_id) {
   baseUrl <- "https://api.chess.com/pub/club/"
   endpoint <-
     paste0(baseUrl,
-           club_id,
-           "/matches",
-           sep = "",
-           collapse = NULL)
+      club_id,
+      "/matches",
+      sep = "",
+      collapse = NULL
+    )
 
   matches_raw <- .fetch(endpoint)
   if (class(matches_raw) != "list") {
@@ -279,9 +283,9 @@ getPlayersToRemoveFromMatch <-
       joined_site = numeric(),
       last_online = numeric(),
       country = character(),
-      daily_rating  = numeric(),
-      daily_960_rating  = numeric(),
-      time_per_move  = numeric(),
+      daily_rating = numeric(),
+      daily_960_rating = numeric(),
+      time_per_move = numeric(),
       timeout_percent = numeric(),
       activity = character(),
       total_games = numeric()
@@ -309,7 +313,7 @@ getPlayersToRemoveFromMatch <-
       mutate(joined_site = as_datetime(joined_site)) %>%
       mutate(last_online = as_datetime(last_online)) %>%
       filter(timeout_percent >= max_timeouts |
-               total_games < min_total_games) %>%
+        total_games < min_total_games) %>%
       select(
         username,
         url,
