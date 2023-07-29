@@ -4,9 +4,10 @@
 ##############################################
 
 require(tidyverse)
-require(jsonlite)
 require(dplyr)
 require(cli)
+require(httr)
+require(RcppSimdJson)
 
 ########################
 ### MATCH MANAGEMENT ###
@@ -28,13 +29,11 @@ getMatchDetailsForMatches <- function(club_id, match_ids) {
   )
 
   total_matches <- length(match_ids)
-  i <- 1
   cli_alert("Fetching {total_matches} matches")
   cli_progress_bar("Fetching matches...", total = total_matches)
   for (match in match_ids) {
     details <- .getMatchDetails(club_id, match)
     match_details <- match_details %>% rbind(details)
-    i <- i + 1
     cli_progress_update()
   }
   cli_progress_done()
@@ -102,18 +101,10 @@ getMatchUrls <-
              sep = "",
              collapse = NULL)
 
-    club_matches_raw <-
-      tryCatch(
-        fromJSON(toString(endpoint), flatten = TRUE),
-        error = function(e) {
-          cli_abort("Matches for `{club_id}` cannot be found")
-          return(NA)
-        },
-        warning = function(w) {
-          cli_abort("Matches for `{club_id}` cannot be found")
-          return(NA)
-        }
-      )
+    club_matches_raw <- .fetch(endpoint)
+    if (class(club_matches_raw) != "list") {
+      cli_abort("Matches for `{club_id}` cannot be found")
+    }
 
     matches <- vector(mode = "character")
     if (include_finished) {
@@ -209,18 +200,10 @@ getMatchResults <- function(club_id) {
            sep = "",
            collapse = NULL)
 
-  matches_raw <-
-    tryCatch(
-      fromJSON(toString(endpoint), flatten = TRUE),
-      error = function(e) {
-        cli_abort("Matches for `{club_id}` cannot be found")
-        return(NA)
-      },
-      warning = function(w) {
-        cli_abort("Matches for `{club_id}` cannot be found")
-        return(NA)
-      }
-    )
+  matches_raw <- .fetch(endpoint)
+  if (class(matches_raw) != "list") {
+    cli_abort("Matches for `{club_id}` cannot be found")
+  }
 
   matches <- matches_raw$finished %>%
     filter(time_class == "daily") %>%
@@ -291,14 +274,13 @@ getPlayersToRemoveFromMatch <-
       cli_abort("No players are signed up for match `{match_id}` on team `{club_id}`")
     }
 
-    i <- 1
-
     cli_alert("Fetching stats for {total_players} users")
     cli_progress_bar("Fetching stats...", total = total_players)
     for (player in players) {
       stats <- getUserStats(user_id = player)
-      user_details <- user_details %>% rbind(stats)
-      i <- i + 1
+      if (class(stats) == "data.frame") {
+        user_details <- user_details %>% rbind(stats)
+      }
       cli_progress_update()
     }
     cli_progress_done()
@@ -343,18 +325,11 @@ getAllMembersByActivity <- function(club_id) {
            "/members",
            sep = "",
            collapse = NULL)
-  member_activity_raw <-
-    tryCatch(
-      fromJSON(toString(endpoint), flatten = TRUE),
-      error = function(e) {
-        cli_abort("Members for club `{club_id}` cannot be found")
-        return(NA)
-      },
-      warning = function(w) {
-        cli_abort("Members for `{club_id}` cannot be found")
-        return(NA)
-      }
-    )
+  member_activity_raw <- .fetch(endpoint)
+  if (class(member_activity_raw) != "list") {
+    cli_abort("Members for club `{club_id}` cannot be found")
+  }
+
   cli_alert_success("Finished fetching members for club `{club_id}`")
   return(member_activity_raw)
 }
@@ -430,18 +405,12 @@ getUserStats <- function(user_id) {
   endpoint <- paste0(baseUrl, user_id, sep = "", collapse = NULL)
 
   # raw data of member activity (username, join date)
-  user_profile <-
-    tryCatch(
-      fromJSON(toString(endpoint), flatten = TRUE),
-      error = function(e) {
-        cli_warn("User `{user_id}` cannot be found.")
-        return(NA)
-      },
-      warning = function(w) {
-        cli_warn("User `{user_id}` cannot be found.")
-        return(NA)
-      }
-    )
+  user_profile <- .fetch(endpoint)
+  if (class(user_profile) != "list") {
+    cli_warn("User `{user_id}` cannot be found.")
+    return(NA)
+  }
+
   user_profile <-
     as.data.frame(user_profile) %>%
     .add_cols(cols = c("name"))
@@ -454,23 +423,11 @@ getUserStats <- function(user_id) {
            sep = "",
            collapse = NULL)
 
-  user_stats_raw <-
-    tryCatch(
-      fromJSON(
-        toString(endpoint),
-        simplifyVector = TRUE,
-        simplifyDataFrame = TRUE,
-        flatten = TRUE
-      ),
-      error = function(e) {
-        cli_warn("Stats for user `{user_id}` cannot be found")
-        return(NA)
-      },
-      warning = function(w) {
-        cli_warn("Stats for user `{user_id}` cannot be found")
-        return(NA)
-      }
-    )
+  user_stats_raw <- .fetch(endpoint)
+  if (class(user_stats_raw) != "list") {
+    cli_warn("Stats for user `{user_id}` cannot be found")
+    return(NA)
+  }
 
   user_stats_unlisted <- unlist(user_stats_raw , use.names = TRUE)
 
@@ -575,15 +532,14 @@ getAllMemberStats <- function(club_id) {
   user_ids <- all_members$username
 
   total_users <- length(user_ids)
-  i <- 1
   cli_alert("Fetching stats for {total_users} users")
   cli_progress_bar("Fetching stats...", total = total_users)
+
   for (user_id in user_ids) {
     details <- getUserStats(user_id)
     if (class(details) == "data.frame") {
       user_details <- user_details %>% rbind(details)
     }
-    i <- i + 1
     cli_progress_update()
   }
   cli_progress_done()
@@ -722,22 +678,17 @@ getAllGamesForPlayer <- function(user_id, year, month, nmonths) {
       "accuracies.black"
     )
 
-  i <- 1
   total_months <- length(JSON_url)
   cli_alert_info("Fetching games for `{user_id}`")
   cli_alert("Fetching games from past {total_months} months")
   cli_progress_bar("Fetching games...", total = total_months)
 
   for (url in JSON_url) {
-    player_games_raw <- tryCatch(
-      fromJSON(toString(url), flatten = TRUE),
-      error = function(e) {
-        cli_warn("Games cannot be found for user {user_id} for {month}/{year}.")
-      },
-      warning = function(w) {
-        cli_warn("Games cannot be found for user {user_id} for {month}/{year}.")
-      }
-    )
+    player_games_raw <- .fetch(url)
+    if (class(player_games_raw) != "list") {
+      cli_warn("Games cannot be found for user {user_id} for {month}/{year}.")
+      next
+    }
 
     player_games <- player_games_raw$games %>% as_tibble()
 
@@ -749,7 +700,6 @@ getAllGamesForPlayer <- function(user_id, year, month, nmonths) {
     all_player_games <- all_player_games %>%
       rbind(player_games)
 
-    i <- i + 1
     cli_progress_update()
   }
   cli_progress_done()
@@ -826,22 +776,11 @@ getGameResultsForPlayer <-
 
 .getTournament <- function(endpoint) {
   cli_inform("Fetching tournament details")
-  results <- tryCatch(
-    fromJSON(toString(endpoint), flatten = TRUE),
-    error = function(e) {
-      cli_warn("Failed to fetch tournament info")
-      return(NA)
-    },
-    warning = function(w) {
-      cli_warn("Failed to fetch tournament info")
-      return(NA)
-    }
-  )
-
+  results <- .fetch(endpoint)
   if (class(results) != "list") {
+    cli_warn("Failed to fetch tournament info")
     return(NA)
   }
-
   return(results$settings$allow_vacation)
 }
 
@@ -856,18 +795,11 @@ convertCountryCode <- function(countryEndpoint) {
   }
   cli_inform("Converting country `{countryEndpoint}`")
 
-  # raw data of member activity (username, join date)
-  country_info <- tryCatch(
-    fromJSON(toString(countryEndpoint), flatten = TRUE),
-    error = function(e) {
-      cli_warn("Failed to fetch country")
-      return(NA)
-    },
-    warning = function(w) {
-      cli_warn("Failed to fetch country")
-      return(NA)
-    }
-  )
+  country_info <- .fetch(countryEndpoint)
+  if (class(country_info) != "list") {
+    cli_warn("Failed to fetch tournament info")
+    return(NA)
+  }
   return(country_info$name)
 }
 
@@ -1011,18 +943,11 @@ getUsersToInvite <- function(club_id,
   baseUrl <- "https://api.chess.com/pub/match/"
   endpoint <- paste0(baseUrl, match_id, sep = "", collapse = NULL)
 
-  match_details_raw <- tryCatch(
-    fromJSON(toString(endpoint), flatten = TRUE),
-    error = function(e) {
-      # Sometimes aborted matches are included from the API. Ignore these.
-      cli_warn("Match `{match_id}` cannot be found")
-      return(empty_tibble)
-    },
-    warning = function(w) {
-      cli_warn("Match `{match_id}` cannot be found")
-      return(empty_tibble)
-    }
-  )
+  match_details_raw <- .fetch(endpoint)
+  if (class(match_details_raw) != "list") {
+    cli_warn("Match `{match_id}` cannot be found")
+    return(NA)
+  }
 
   team1 <- match_details_raw$teams$team1
   team2 <- match_details_raw$teams$team2
@@ -1138,4 +1063,16 @@ getUsersToInvite <- function(club_id,
   url_elements <- url %>% str_split_1('/')
   id <- url_elements %>% last()
   return(id)
+}
+
+.fetch <- function(endpoint) {
+  response <- GET(endpoint)
+  status <- response$status_code
+  data <- NA
+  if (between(status, 200, 299)) {
+    data <- fparse(response$content)
+  } else {
+    cli_inform(c("Failed to fetch data", "x" = "HTTP {status} response received from {endpoint}"))
+  }
+  return(data)
 }
