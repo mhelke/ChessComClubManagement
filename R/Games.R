@@ -147,7 +147,7 @@ getAllGamesForPlayer <- function(user_id, year, month, nmonths) {
   cli_progress_done()
   cli_alert_success("Done fetching games for {user_id}")
 
-  if(nrow(all_player_games) == 0) {
+  if (nrow(all_player_games) == 0) {
     return(all_player_games)
   }
 
@@ -185,7 +185,7 @@ getGameResultsForPlayer <-
            include_vacation = FALSE) {
     player_stats <- getAllGamesForPlayer(user_id, year, month, nmonths)
 
-    if(nrow(player_stats) == 0) {
+    if (nrow(player_stats) == 0) {
       return(player_stats)
     }
 
