@@ -1,9 +1,9 @@
 #' @import dplyr
 #' @import cli
 #' @importFrom httr GET
-#' @importFrom RcppSimdJson fparse
 #' @importFrom stringr str_split_1
 #' @importFrom lubridate as_datetime ymd
+#' @importFrom jsonlite fromJSON
 
 # Collects the details of the specified team match into a tibble
 .getMatchDetails <- function(club_id, match_id) {
@@ -126,6 +126,9 @@
 }
 
 .getTournament <- function(endpoint) {
+  if (is.na(endpoint)) {
+    return(NA)
+  }
   cli_inform("Fetching tournament details")
   results <- .fetch(endpoint)
   if (class(results) != "list") {
@@ -155,7 +158,7 @@
   status <- response$status_code
   data <- NA
   if (between(status, 200, 299)) {
-    data <- fparse(response$content)
+    data <- fromJSON(rawToChar(response$content), flatten = TRUE)
   } else {
     cli_inform(c("Failed to fetch data", "x" = "HTTP {status} response received from {endpoint}"))
   }
