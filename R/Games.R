@@ -1,7 +1,6 @@
 #' @import dplyr
 #' @import cli
 #' @importFrom httr GET
-#' @importFrom RcppSimdJson fparse
 #' @importFrom stringr str_split_1
 #' @importFrom lubridate as_datetime ymd
 
@@ -218,3 +217,4 @@ getGameResultsForPlayer <-
 
     return(results)
   }
+
