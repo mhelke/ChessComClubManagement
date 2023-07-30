@@ -14,7 +14,7 @@
 #' @param nmonths The number of months to query the archives
 #' @returns All daily games for a player
 #' @source chess.com public API
-#' @seealso [getGameResultsForPlayer()] `getGameResultsForPlayer`
+#' @seealso [getGameResultsForPlayer()]
 #' @export
 getAllGamesForPlayer <- function(user_id, year, month, nmonths) {
   baseUrl <- "https://api.chess.com/pub/player/"
@@ -125,7 +125,7 @@ getAllGamesForPlayer <- function(user_id, year, month, nmonths) {
   cli_progress_bar("Fetching games...", total = total_months)
 
   for (url in JSON_url) {
-    player_games_raw <- fromJSON(JSON_url[1], flatten = TRUE)
+    player_games_raw <- fromJSON(url, flatten = TRUE)
     if (class(player_games_raw) != "list") {
       cli_warn("Games cannot be found for user {user_id} for {month}/{year}.")
       next
@@ -145,6 +145,10 @@ getAllGamesForPlayer <- function(user_id, year, month, nmonths) {
   }
   cli_progress_done()
   cli_alert_success("Done fetching games for {user_id}")
+
+  if(nrow(all_player_games) == 0) {
+    return(all_player_games)
+  }
 
   # Filter by daily games and opponent stats
   player_stats <- all_player_games %>%
@@ -180,6 +184,10 @@ getGameResultsForPlayer <-
            include_vacation = FALSE) {
     player_stats <- getAllGamesForPlayer(user_id, year, month, nmonths)
 
+    if(nrow(player_stats) == 0) {
+      return(player_stats)
+    }
+
     # Filter for match/tournament timeouts
     results <- player_stats %>%
       select(username, result, time_control, match, tournament) %>%
@@ -196,8 +204,6 @@ getGameResultsForPlayer <-
         )
       ) %>%
       filter(event == "match" | event == "tournament")
-
-
 
     # Check the tournaments endpoint
     if (include_vacation & nrow(results) > 0) {
