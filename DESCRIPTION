@@ -12,6 +12,7 @@ Imports:
   httr,
   stringr,
   RcppSimdJson,
+  jsonlite,
   lubridate
 License: MIT + file LICENSE
 Encoding: UTF-8

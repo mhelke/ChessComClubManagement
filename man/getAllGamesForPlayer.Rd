@@ -25,5 +25,5 @@ All daily games for a player
 Fetches a player's daily games from the archive
 }
 \seealso{
-[getGameResultsForPlayer()] `getGameResultsForPlayer`
+[getGameResultsForPlayer()]
 }
