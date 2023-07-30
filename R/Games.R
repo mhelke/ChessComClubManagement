@@ -217,4 +217,3 @@ getGameResultsForPlayer <-
 
     return(results)
   }
-

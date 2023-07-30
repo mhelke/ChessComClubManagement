@@ -126,7 +126,7 @@
 }
 
 .getTournament <- function(endpoint) {
-  if(is.na(endpoint)) {
+  if (is.na(endpoint)) {
     return(NA)
   }
   cli_inform("Fetching tournament details")
@@ -159,7 +159,7 @@
   data <- NA
   if (between(status, 200, 299)) {
     data <- fromJSON(rawToChar(response$content), flatten = TRUE)
-   # data <- fparse(response$content)
+    # data <- fparse(response$content)
   } else {
     cli_inform(c("Failed to fetch data", "x" = "HTTP {status} response received from {endpoint}"))
   }
