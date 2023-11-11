@@ -15,7 +15,8 @@ getUsersToInvite(
   min_months_account_age = 0,
   min_days_last_online = NA,
   min_rating = 0,
-  country_code = NA
+  country_code = NA,
+  access_token = NA
 )
 }
 \arguments{
@@ -34,6 +35,8 @@ getUsersToInvite(
 \item{min_rating}{The minimum allowed rating of the user}
 
 \item{country_code}{The country code on the user's profile. Each country has a 2 character code assigned by chess.com}
+
+\item{access_token}{The access token for chess.com APIs obtained through authorization}
 }
 \value{
 Data frame of ideal players within a given club

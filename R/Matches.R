@@ -11,6 +11,7 @@
 #' @description Fetches match data for the given list of team matches for a particular club Id.
 #' @param club_id ID of the club you want matches details for
 #' @param match_ids List of IDs of the matches you want details for
+#' @param access_token The access token for chess.com APIs obtained through authorization
 #' @returns Tibble of all specified match data
 #' @source chess.com public API
 #' @export
@@ -46,6 +47,7 @@ getMatchDetailsForMatches <- function(club_id, match_ids, access_token = NA) {
 #' @param include_in_progress Returns in-progress match IDs
 #' @param include_upcoming Returns upcoming match IDs
 #' @param nDays The number of days to look back for matches, based on the match start date
+#' @param access_token The access token for chess.com APIs obtained through authorization
 #' @returns List of match IDs
 #' @source chess.com public API
 #' @export
@@ -89,6 +91,7 @@ getMatchIds <-
 #' @param include_in_progress Returns in-progress match URLs
 #' @param include_upcoming Returns upcoming match URLs
 #' @param nDays The number of days to look back for matches, based on the match start date
+#' @param access_token The access token for chess.com APIs obtained through authorization
 #' @returns List of match URLs
 #' @seealso [getMatchIds()]
 #' @source chess.com public API
@@ -165,6 +168,7 @@ getMatchUrls <-
 #' @description Fetches the record of match results for all players who have ever played a match for the club and are currently members of the club.
 #' Note: chess.com is temporarily limiting finished matches to the most recent 500 due to performance.
 #' @param club_id ID of the club you want the leader board for
+#' @param access_token The access token for chess.com APIs obtained through authorization
 #' @returns A Tibble of club members who have participated in matches and their all-time records
 #' @note Chess.com public API only returns the most recent 500 completed matches due to performance issues. Until that is resolved by the chess.com team, this function may NOT return the all-time stats and results may not be accurate for all clubs.
 #' @source chess.com public API
@@ -208,6 +212,7 @@ getAllTimeLeaderBoard <- function(club_id, access_token = NA) {
 #' @title Get the results of team matches against other clubs
 #' @description Fetches the completed team matches and returns a the given club's record against other clubs.
 #' @param club_id ID of the club you want the results for
+#' @param access_token The access token for chess.com APIs obtained through authorization
 #' @returns A Tibble of the club's team match record versus other clubs
 #' @note Chess.com public API only returns the most recent 500 completed matches due to performance issues. Until that is resolved by the chess.com team, this function may NOT return all the clubs ever played.
 #' @source chess.com public API
@@ -255,6 +260,7 @@ getMatchResults <- function(club_id, access_token = NA) {
 #' @param club_id ID of the club you manage
 #' @param max_timeouts The maximum timeout percentage allowed for participation
 #' @param min_total_games The minimum number of completed games allowed for participation
+#' @param access_token The access token for chess.com APIs obtained through authorization
 #' @returns A list of players ineligible to participate in the match, filtered by the provided criteria
 #' @source chess.com public API
 #' @export

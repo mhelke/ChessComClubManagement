@@ -7,7 +7,13 @@
 chess.com public API
 }
 \usage{
-getPlayersToRemoveFromMatch(match_id, club_id, max_timeouts, min_total_games)
+getPlayersToRemoveFromMatch(
+  match_id,
+  club_id,
+  max_timeouts,
+  min_total_games,
+  access_token = NA
+)
 }
 \arguments{
 \item{match_id}{ID of the match to manage}
@@ -17,6 +23,8 @@ getPlayersToRemoveFromMatch(match_id, club_id, max_timeouts, min_total_games)
 \item{max_timeouts}{The maximum timeout percentage allowed for participation}
 
 \item{min_total_games}{The minimum number of completed games allowed for participation}
+
+\item{access_token}{The access token for chess.com APIs obtained through authorization}
 }
 \value{
 A list of players ineligible to participate in the match, filtered by the provided criteria

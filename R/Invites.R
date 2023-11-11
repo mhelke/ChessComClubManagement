@@ -15,6 +15,7 @@
 #' @param min_days_last_online The number of days ago since the user was last online
 #' @param min_rating The minimum allowed rating of the user
 #' @param country_code The country code on the user's profile. Each country has a 2 character code assigned by chess.com
+#' @param access_token The access token for chess.com APIs obtained through authorization
 #' @returns Data frame of ideal players within a given club
 #' @source Chess.com public API
 #' @export

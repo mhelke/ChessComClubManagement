@@ -8,6 +8,7 @@
 #' @title Get All Club Members By Activity
 #' @description Fetches all club members sorted by activity level (weekly, monthly, all-time (inactive) for the given club
 #' @param club_id ID of the club you want the list of members for
+#' @param access_token The access token for chess.com APIs obtained through authorization
 #' @returns A list of members grouped by activity level (weekly, monthly,  all-time (inactive))
 #' @seealso [getAllClubMembers] which returns the same data already merged into one table
 #' @source chess.com public API
@@ -35,6 +36,7 @@ getAllMembersByActivity <- function(club_id, access_token = NA) {
 #' @title Get All Club Members
 #' @description Fetches all club members for the given club and returns the usernames and dates they joined the club.
 #' @param club_id ID of the club you want the members of
+#' @param access_token The access token for chess.com APIs obtained through authorization
 #' @returns A Tibble of all members in the club and their join date
 #' @source chess.com public API
 #' @export
@@ -70,6 +72,7 @@ getAllClubMembers <- function(club_id, access_token = NA) {
 #' @description Calculates which members have not joined a team match in the past 90 days
 #' @param club_id ID of the club you want the list of inactive members for
 #' @param nDays The number of days the user has been inactive
+#' @param access_token The access token for chess.com APIs obtained through authorization
 #' @returns Tibble of members who have not joined a match in the past n days along with the date they joined the club
 #' @source chess.com public API
 #' @export
@@ -105,6 +108,7 @@ getInactiveMatchPlayers <- function(club_id, nDays = 90, access_token = NA) {
 #' @title Get Stats for a Given User
 #' @description Returns relevant stats for a user
 #' @param user_id ID of the user you want stats for
+#' @param access_token The access token for chess.com APIs obtained through authorization
 #' @returns One row tibble of relevant user stats for club management: Username, joined chess.com date, last online date, country, daily standard and 960 ratings, time per move, and timeout percent
 #' @source chess.com public API
 #' @export
@@ -217,6 +221,7 @@ getUserStats <- function(user_id, access_token = NA) {
 #' @title Get Stats for all Users in the Given Club
 #' @description Fetches relevant stats for all users in the given club.
 #' @param club_id ID of the club you want user stats for
+#' @param access_token The access token for chess.com APIs obtained through authorization
 #' @returns Tibble of relevant user stats for club management:
 #' Username, joined chess.com date, last online date, country, daily standard and 960 ratings, time per move, and timeout percent
 #' @source chess.com public API
@@ -283,6 +288,7 @@ getAllMemberStats <- function(club_id, access_token = NA) {
 #' @title Convert the Country Code from User Stats
 #' @description Calls the chess.com country API to get the country name. Provided only for convenience since all returns by default will not convert the country.
 #' @param countryEndpoint the URL for the chess.com country API
+#' @param access_token The access token for chess.com APIs obtained through authorization
 #' @returns The name of the country
 #' @source chess.com public API
 #' @export

@@ -7,10 +7,12 @@
 chess.com public API
 }
 \usage{
-convertCountryCode(countryEndpoint)
+convertCountryCode(countryEndpoint, access_token = NA)
 }
 \arguments{
 \item{countryEndpoint}{the URL for the chess.com country API}
+
+\item{access_token}{The access token for chess.com APIs obtained through authorization}
 }
 \value{
 The name of the country

@@ -12,7 +12,8 @@ getMatchUrls(
   include_finished = TRUE,
   include_in_progress = TRUE,
   include_upcoming = TRUE,
-  nDays = NA
+  nDays = NA,
+  access_token = NA
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ getMatchUrls(
 \item{include_upcoming}{Returns upcoming match URLs}
 
 \item{nDays}{The number of days to look back for matches, based on the match start date}
+
+\item{access_token}{The access token for chess.com APIs obtained through authorization}
 }
 \value{
 List of match URLs

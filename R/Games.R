@@ -11,6 +11,7 @@
 #' @param year Which year to start querying the user's archive from
 #' @param month Which month to start querying the user's archive from
 #' @param nmonths The number of months to query the archives
+#' @param access_token The access token for chess.com APIs obtained through authorization
 #' @returns All daily games for a player
 #' @source chess.com public API
 #' @seealso [getGameResultsForPlayer()] `getGameResultsForPlayer`
@@ -168,6 +169,7 @@ getAllGamesForPlayer <- function(user_id, year, month, nmonths, access_token = N
 #' @param month Which month to start querying the user's archive from
 #' @param nmonths The number of months to query the archives
 #' @param include_vacation Boolean for whether to check the player's tournament games for vacation rules
+#' @param access_token The access token for chess.com APIs obtained through authorization
 #' @returns Tibble of the number of games for a user for each event type/time control/result grouping
 #' @source chess.com public API
 #' @export

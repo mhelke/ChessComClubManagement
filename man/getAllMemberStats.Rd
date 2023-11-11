@@ -7,10 +7,12 @@
 chess.com public API
 }
 \usage{
-getAllMemberStats(club_id)
+getAllMemberStats(club_id, access_token = NA)
 }
 \arguments{
 \item{club_id}{ID of the club you want user stats for}
+
+\item{access_token}{The access token for chess.com APIs obtained through authorization}
 }
 \value{
 Tibble of relevant user stats for club management:

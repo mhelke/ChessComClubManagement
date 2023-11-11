@@ -12,7 +12,8 @@ getGameResultsForPlayer(
   year,
   month,
   nmonths,
-  include_vacation = FALSE
+  include_vacation = FALSE,
+  access_token = NA
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ getGameResultsForPlayer(
 \item{nmonths}{The number of months to query the archives}
 
 \item{include_vacation}{Boolean for whether to check the player's tournament games for vacation rules}
+
+\item{access_token}{The access token for chess.com APIs obtained through authorization}
 }
 \value{
 Tibble of the number of games for a user for each event type/time control/result grouping
