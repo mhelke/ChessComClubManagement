@@ -18,11 +18,10 @@ getAllMembersByActivity <- function(club_id, access_token = NA) {
   baseUrl <- "https://api.chess.com/pub/club/"
   endpoint <-
     paste0(baseUrl,
-      club_id,
-      "/members",
-      sep = "",
-      collapse = NULL
-    )
+           club_id,
+           "/members",
+           sep = "",
+           collapse = NULL)
   member_activity_raw <- .fetch(endpoint, access_token)
   if (class(member_activity_raw) != "list") {
     cli_abort("Members for club `{club_id}` cannot be found")
@@ -41,7 +40,8 @@ getAllMembersByActivity <- function(club_id, access_token = NA) {
 #' @source chess.com public API
 #' @export
 getAllClubMembers <- function(club_id, access_token = NA) {
-  all_members_by_activity <- getAllMembersByActivity(club_id, access_token)
+  all_members_by_activity <-
+    getAllMembersByActivity(club_id, access_token)
   weekly_members <- all_members_by_activity$weekly
   monthly_members <- all_members_by_activity$monthly
   all_time_members <- all_members_by_activity$all_time
@@ -62,6 +62,7 @@ getAllClubMembers <- function(club_id, access_token = NA) {
   all_club_members <-
     rbind(weekly_members, monthly_members, all_time_members) %>%
     as.data.frame() %>%
+
     mutate(joined_club = as_datetime(joined_club))
 
   return(all_club_members)
@@ -76,33 +77,34 @@ getAllClubMembers <- function(club_id, access_token = NA) {
 #' @returns Tibble of members who have not joined a match in the past n days along with the date they joined the club
 #' @source chess.com public API
 #' @export
-getInactiveMatchPlayers <- function(club_id, nDays = 90, access_token = NA) {
-  # Get all match Ids
-  all_match_ids <- getMatchIds(
-    club_id,
-    nDays = nDays,
-    access_token = access_token
-  )
+getInactiveMatchPlayers <-
+  function(club_id,
+           nDays = 90,
+           access_token = NA) {
+    # Get all match Ids
+    all_match_ids <- getMatchIds(club_id,
+                                 nDays = nDays,
+                                 access_token = access_token)
 
-  all_match_details_raw <-
-    getMatchDetailsForMatches(club_id, all_match_ids, access_token)
+    all_match_details_raw <-
+      getMatchDetailsForMatches(club_id, all_match_ids, access_token)
 
-  all_players_in_matches <- all_match_details_raw %>%
-    select(username) %>%
-    distinct()
+    all_players_in_matches <- all_match_details_raw %>%
+      select(username) %>%
+      distinct()
 
-  all_club_members <- getAllClubMembers(club_id, access_token)
+    all_club_members <- getAllClubMembers(club_id, access_token)
 
-  no_matches_past_n_days <- all_club_members %>%
-    anti_join(all_players_in_matches, by = "username") %>%
-    arrange(joined) %>%
-    mutate(joined = format(
-      as.POSIXct(joined, origin = "1970-01-01", tz = "UTC"),
-      "%m/%d/%Y"
-    ))
+    no_matches_past_n_days <- all_club_members %>%
+      anti_join(all_players_in_matches, by = "username") %>%
+      arrange(joined) %>%
+      mutate(joined = format(
+        as.POSIXct(joined, origin = "1970-01-01", tz = "UTC"),
+        "%m/%d/%Y"
+      ))
 
-  return(no_matches_past_n_days)
-}
+    return(no_matches_past_n_days)
+  }
 
 #' @name getUserStats
 #' @title Get Stats for a Given User
@@ -130,11 +132,10 @@ getUserStats <- function(user_id, access_token = NA) {
   baseUrl <- "https://api.chess.com/pub/player/"
   endpoint <-
     paste0(baseUrl,
-      user_id,
-      "/stats",
-      sep = "",
-      collapse = NULL
-    )
+           user_id,
+           "/stats",
+           sep = "",
+           collapse = NULL)
 
   user_stats_raw <- .fetch(endpoint, access_token)
   if (class(user_stats_raw) != "list") {

@@ -15,27 +15,28 @@
 #' @returns Tibble of all specified match data
 #' @source chess.com public API
 #' @export
-getMatchDetailsForMatches <- function(club_id, match_ids, access_token = NA) {
-  match_details <- data.frame(
-    username = character(),
-    played_as_white = character(),
-    played_as_black = character(),
-    board = character(),
-    time_out_count = character()
-  )
+getMatchDetailsForMatches <-
+  function(club_id, match_ids, access_token = NA) {
+    match_details <- data.frame(
+      username = character(),
+      played_as_white = character(),
+      played_as_black = character(),
+      board = character(),
+      time_out_count = character()
+    )
 
-  total_matches <- length(match_ids)
-  cli_alert("Fetching {total_matches} matches")
-  cli_progress_bar("Fetching matches...", total = total_matches)
-  for (match in match_ids) {
-    details <- .getMatchDetails(club_id, match, access_token)
-    match_details <- match_details %>% rbind(details)
-    cli_progress_update()
+    total_matches <- length(match_ids)
+    cli_alert("Fetching {total_matches} matches")
+    cli_progress_bar("Fetching matches...", total = total_matches)
+    for (match in match_ids) {
+      details <- .getMatchDetails(club_id, match, access_token)
+      match_details <- match_details %>% rbind(details)
+      cli_progress_update()
+    }
+    cli_progress_done()
+    cli_alert_success("Finished fetching details for {total_matches} matches")
+    return(match_details)
   }
-  cli_progress_done()
-  cli_alert_success("Finished fetching details for {total_matches} matches")
-  return(match_details)
-}
 
 #' @name getMatchIds
 #' @title Get the Daily Match Ids for a given club
@@ -109,11 +110,10 @@ getMatchUrls <-
     baseUrl <- "https://api.chess.com/pub/club/"
     endpoint <-
       paste0(baseUrl,
-        club_id,
-        "/matches",
-        sep = "",
-        collapse = NULL
-      )
+             club_id,
+             "/matches",
+             sep = "",
+             collapse = NULL)
 
     club_matches_raw <- .fetch(endpoint, access_token)
     if (class(club_matches_raw) != "list") {
@@ -221,11 +221,10 @@ getMatchResults <- function(club_id, access_token = NA) {
   baseUrl <- "https://api.chess.com/pub/club/"
   endpoint <-
     paste0(baseUrl,
-      club_id,
-      "/matches",
-      sep = "",
-      collapse = NULL
-    )
+           club_id,
+           "/matches",
+           sep = "",
+           collapse = NULL)
 
   matches_raw <- .fetch(endpoint, access_token)
   if (class(matches_raw) != "list") {
@@ -283,7 +282,8 @@ getPlayersToRemoveFromMatch <-
       cli_abort("{.var min_total_games} cannot be NA")
     }
 
-    match_details <- getMatchDetailsForMatches(club_id, match_id, access_token)
+    match_details <-
+      getMatchDetailsForMatches(club_id, match_id, access_token)
 
     players <- match_details$username
 
@@ -323,7 +323,7 @@ getPlayersToRemoveFromMatch <-
       mutate(joined_site = as_datetime(joined_site)) %>%
       mutate(last_online = as_datetime(last_online)) %>%
       filter(timeout_percent >= max_timeouts |
-        total_games < min_total_games) %>%
+               total_games < min_total_games) %>%
       select(
         username,
         url,

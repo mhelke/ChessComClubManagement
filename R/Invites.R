@@ -32,8 +32,7 @@ getUsersToInvite <- function(club_id,
   if (nchar(country_code) != 2 & !is.na(country_code)) {
     cli_abort(
       c("Invalid country code: `{country_code}`.",
-        "i" = "Please find the correct country code here: https://www.chess.com/news/view/published-data-api#pubapi-endpoint-country"
-      )
+        "i" = "Please find the correct country code here: https://www.chess.com/news/view/published-data-api#pubapi-endpoint-country")
     )
   }
 

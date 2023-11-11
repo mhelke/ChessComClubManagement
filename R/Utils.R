@@ -158,7 +158,8 @@
     response <- GET(endpoint)
   } else {
     authorization <- paste0("Bearer ", token)
-    response <- GET(endpoint, add_headers(Authorization = authorization))
+    response <-
+      GET(endpoint, add_headers(Authorization = authorization))
   }
 
   status <- response$status_code
