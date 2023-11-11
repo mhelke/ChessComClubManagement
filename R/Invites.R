@@ -82,7 +82,7 @@ getUsersToInvite <- function(club_id,
   if (!is.na(country_code)) {
     start <- count(invites)
     invites <- invites %>%
-      filter(grepl(country_code, str_sub(country, -2, -1), ignore.case = TRUE))
+      filter(grepl(country_code, str_sub(country,-2,-1), ignore.case = TRUE))
 
     change <- start - count(invites)
     cli_alert_info("Dropped {change} players on country requirement of {country_code}")
