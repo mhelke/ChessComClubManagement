@@ -110,10 +110,11 @@ getMatchUrls <-
     baseUrl <- "https://api.chess.com/pub/club/"
     endpoint <-
       paste0(baseUrl,
-             club_id,
-             "/matches",
-             sep = "",
-             collapse = NULL)
+        club_id,
+        "/matches",
+        sep = "",
+        collapse = NULL
+      )
 
     club_matches_raw <- .fetch(endpoint, access_token)
     if (class(club_matches_raw) != "list") {
@@ -221,10 +222,11 @@ getMatchResults <- function(club_id, access_token = NA) {
   baseUrl <- "https://api.chess.com/pub/club/"
   endpoint <-
     paste0(baseUrl,
-           club_id,
-           "/matches",
-           sep = "",
-           collapse = NULL)
+      club_id,
+      "/matches",
+      sep = "",
+      collapse = NULL
+    )
 
   matches_raw <- .fetch(endpoint, access_token)
   if (class(matches_raw) != "list") {
@@ -323,7 +325,7 @@ getPlayersToRemoveFromMatch <-
       mutate(joined_site = as_datetime(joined_site)) %>%
       mutate(last_online = as_datetime(last_online)) %>%
       filter(timeout_percent >= max_timeouts |
-               total_games < min_total_games) %>%
+        total_games < min_total_games) %>%
       select(
         username,
         url,
