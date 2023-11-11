@@ -15,7 +15,7 @@
 #' @source chess.com public API
 #' @seealso [getGameResultsForPlayer()] `getGameResultsForPlayer`
 #' @export
-getAllGamesForPlayer <- function(user_id, year, month, nmonths) {
+getAllGamesForPlayer <- function(user_id, year, month, nmonths, access_token = NA) {
   baseUrl <- "https://api.chess.com/pub/player/"
   JSON_url <- vector(mode = "character", nmonths)
 
@@ -124,7 +124,7 @@ getAllGamesForPlayer <- function(user_id, year, month, nmonths) {
   cli_progress_bar("Fetching games...", total = total_months)
 
   for (url in JSON_url) {
-    player_games_raw <- .fetch(url)
+    player_games_raw <- .fetch(url, access_token)
     if (class(player_games_raw) != "list") {
       cli_warn("Games cannot be found for user {user_id} for {month}/{year}.")
       next
@@ -176,8 +176,9 @@ getGameResultsForPlayer <-
            year,
            month,
            nmonths,
-           include_vacation = FALSE) {
-    player_stats <- getAllGamesForPlayer(user_id, year, month, nmonths)
+           include_vacation = FALSE,
+           access_token = NA) {
+    player_stats <- getAllGamesForPlayer(user_id, year, month, nmonths, access_token)
 
     # Filter for match/tournament timeouts
     results <- player_stats %>%
@@ -201,7 +202,7 @@ getGameResultsForPlayer <-
     # Check the tournaments endpoint
     if (include_vacation & nrow(results) > 0) {
       results <- results %>%
-        mutate(vacation = sapply(tournament, .getTournament)) %>%
+        mutate(vacation = sapply(tournament, .getTournament, access_token = access_token)) %>%
         mutate(vacation = if_else(event == "match", TRUE, vacation))
     } else {
       results <- results %>%

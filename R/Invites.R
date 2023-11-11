@@ -25,7 +25,8 @@ getUsersToInvite <- function(club_id,
                              min_months_account_age = 0,
                              min_days_last_online = NA,
                              min_rating = 0,
-                             country_code = NA) {
+                             country_code = NA,
+                             access_token = NA) {
   # Verify given data is accurate
   if (nchar(country_code) != 2 & !is.na(country_code)) {
     cli_abort(
@@ -36,7 +37,7 @@ getUsersToInvite <- function(club_id,
   }
 
   # Fetch club members
-  invites <- getAllMemberStats(club_id)
+  invites <- getAllMemberStats(club_id, access_token)
 
   # Process the dates needed for calculations
   invites <- invites %>%

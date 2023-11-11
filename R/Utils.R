@@ -6,7 +6,7 @@
 #' @importFrom jsonlite fromJSON
 
 # Collects the details of the specified team match into a tibble
-.getMatchDetails <- function(club_id, match_id) {
+.getMatchDetails <- function(club_id, match_id, access_token) {
   empty_tibble <- tibble(
     username = character(),
     played_as_white = character(),
@@ -18,7 +18,7 @@
   baseUrl <- "https://api.chess.com/pub/match/"
   endpoint <- paste0(baseUrl, match_id, sep = "", collapse = NULL)
 
-  match_details_raw <- .fetch(endpoint)
+  match_details_raw <- .fetch(endpoint, access_token)
   if (class(match_details_raw) != "list") {
     cli_warn("Match `{match_id}` cannot be found")
     return(NA)
@@ -125,12 +125,12 @@
   return(my_team_players)
 }
 
-.getTournament <- function(endpoint) {
+.getTournament <- function(endpoint, access_token = NA) {
   if (is.na(endpoint)) {
     return(NA)
   }
   cli_inform("Fetching tournament details")
-  results <- .fetch(endpoint)
+  results <- .fetch(endpoint, access_token)
   if (class(results) != "list") {
     cli_warn("Failed to fetch tournament info")
     return(NA)
@@ -153,8 +153,14 @@
   return(id)
 }
 
-.fetch <- function(endpoint) {
-  response <- GET(endpoint)
+.fetch <- function(endpoint, token) {
+  if (is.na(token)) {
+    response <- GET(endpoint)
+  } else {
+    authorization <- paste0("Bearer ", token)
+    response <- GET(endpoint, add_headers(Authorization = authorization))
+  }
+
   status <- response$status_code
   data <- NA
   if (between(status, 200, 299)) {
