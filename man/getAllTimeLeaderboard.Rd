@@ -7,10 +7,12 @@
 chess.com public API
 }
 \usage{
-getAllTimeLeaderBoard(club_id)
+getAllTimeLeaderBoard(club_id, access_token = NA)
 }
 \arguments{
 \item{club_id}{ID of the club you want the leader board for}
+
+\item{access_token}{The access token for chess.com APIs obtained through authorization}
 }
 \value{
 A Tibble of club members who have participated in matches and their all-time records

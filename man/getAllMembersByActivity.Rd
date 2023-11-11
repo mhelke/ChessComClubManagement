@@ -7,10 +7,12 @@
 chess.com public API
 }
 \usage{
-getAllMembersByActivity(club_id)
+getAllMembersByActivity(club_id, access_token = NA)
 }
 \arguments{
 \item{club_id}{ID of the club you want the list of members for}
+
+\item{access_token}{The access token for chess.com APIs obtained through authorization}
 }
 \value{
 A list of members grouped by activity level (weekly, monthly,  all-time (inactive))

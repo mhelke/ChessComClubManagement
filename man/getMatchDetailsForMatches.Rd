@@ -7,12 +7,14 @@
 chess.com public API
 }
 \usage{
-getMatchDetailsForMatches(club_id, match_ids)
+getMatchDetailsForMatches(club_id, match_ids, access_token = NA)
 }
 \arguments{
 \item{club_id}{ID of the club you want matches details for}
 
 \item{match_ids}{List of IDs of the matches you want details for}
+
+\item{access_token}{The access token for chess.com APIs obtained through authorization}
 }
 \value{
 Tibble of all specified match data

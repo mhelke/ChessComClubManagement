@@ -7,7 +7,7 @@
 chess.com public API
 }
 \usage{
-getAllGamesForPlayer(user_id, year, month, nmonths)
+getAllGamesForPlayer(user_id, year, month, nmonths, access_token = NA)
 }
 \arguments{
 \item{user_id}{ID of the user you want stats for}
@@ -17,6 +17,8 @@ getAllGamesForPlayer(user_id, year, month, nmonths)
 \item{month}{Which month to start querying the user's archive from}
 
 \item{nmonths}{The number of months to query the archives}
+
+\item{access_token}{The access token for chess.com APIs obtained through authorization}
 }
 \value{
 All daily games for a player

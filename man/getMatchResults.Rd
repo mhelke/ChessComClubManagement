@@ -7,10 +7,12 @@
 chess.com public API
 }
 \usage{
-getMatchResults(club_id)
+getMatchResults(club_id, access_token = NA)
 }
 \arguments{
 \item{club_id}{ID of the club you want the results for}
+
+\item{access_token}{The access token for chess.com APIs obtained through authorization}
 }
 \value{
 A Tibble of the club's team match record versus other clubs

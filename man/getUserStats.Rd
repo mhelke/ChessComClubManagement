@@ -7,10 +7,12 @@
 chess.com public API
 }
 \usage{
-getUserStats(user_id)
+getUserStats(user_id, access_token = NA)
 }
 \arguments{
 \item{user_id}{ID of the user you want stats for}
+
+\item{access_token}{The access token for chess.com APIs obtained through authorization}
 }
 \value{
 One row tibble of relevant user stats for club management: Username, joined chess.com date, last online date, country, daily standard and 960 ratings, time per move, and timeout percent

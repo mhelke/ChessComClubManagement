@@ -11,30 +11,32 @@
 #' @description Fetches match data for the given list of team matches for a particular club Id.
 #' @param club_id ID of the club you want matches details for
 #' @param match_ids List of IDs of the matches you want details for
+#' @param access_token The access token for chess.com APIs obtained through authorization
 #' @returns Tibble of all specified match data
 #' @source chess.com public API
 #' @export
-getMatchDetailsForMatches <- function(club_id, match_ids) {
-  match_details <- data.frame(
-    username = character(),
-    played_as_white = character(),
-    played_as_black = character(),
-    board = character(),
-    time_out_count = character()
-  )
+getMatchDetailsForMatches <-
+  function(club_id, match_ids, access_token = NA) {
+    match_details <- data.frame(
+      username = character(),
+      played_as_white = character(),
+      played_as_black = character(),
+      board = character(),
+      time_out_count = character()
+    )
 
-  total_matches <- length(match_ids)
-  cli_alert("Fetching {total_matches} matches")
-  cli_progress_bar("Fetching matches...", total = total_matches)
-  for (match in match_ids) {
-    details <- .getMatchDetails(club_id, match)
-    match_details <- match_details %>% rbind(details)
-    cli_progress_update()
+    total_matches <- length(match_ids)
+    cli_alert("Fetching {total_matches} matches")
+    cli_progress_bar("Fetching matches...", total = total_matches)
+    for (match in match_ids) {
+      details <- .getMatchDetails(club_id, match, access_token)
+      match_details <- match_details %>% rbind(details)
+      cli_progress_update()
+    }
+    cli_progress_done()
+    cli_alert_success("Finished fetching details for {total_matches} matches")
+    return(match_details)
   }
-  cli_progress_done()
-  cli_alert_success("Finished fetching details for {total_matches} matches")
-  return(match_details)
-}
 
 #' @name getMatchIds
 #' @title Get the Daily Match Ids for a given club
@@ -46,6 +48,7 @@ getMatchDetailsForMatches <- function(club_id, match_ids) {
 #' @param include_in_progress Returns in-progress match IDs
 #' @param include_upcoming Returns upcoming match IDs
 #' @param nDays The number of days to look back for matches, based on the match start date
+#' @param access_token The access token for chess.com APIs obtained through authorization
 #' @returns List of match IDs
 #' @source chess.com public API
 #' @export
@@ -54,14 +57,16 @@ getMatchIds <-
            include_finished = TRUE,
            include_in_progress = TRUE,
            include_upcoming = TRUE,
-           nDays = NA) {
+           nDays = NA,
+           access_token = NA) {
     all_matches <-
       getMatchUrls(
         club_id,
         include_finished,
         include_in_progress,
         include_upcoming,
-        nDays
+        nDays,
+        access_token
       )
 
     total_matches <- length(all_matches)
@@ -87,6 +92,7 @@ getMatchIds <-
 #' @param include_in_progress Returns in-progress match URLs
 #' @param include_upcoming Returns upcoming match URLs
 #' @param nDays The number of days to look back for matches, based on the match start date
+#' @param access_token The access token for chess.com APIs obtained through authorization
 #' @returns List of match URLs
 #' @seealso [getMatchIds()]
 #' @source chess.com public API
@@ -96,7 +102,8 @@ getMatchUrls <-
            include_finished = TRUE,
            include_in_progress = TRUE,
            include_upcoming = TRUE,
-           nDays = NA) {
+           nDays = NA,
+           access_token = NA) {
     message <-
       ifelse(is.na(nDays), "all time", paste0("the past ", nDays, " days"))
     cli_inform("Fetching team match URLs from {message}")
@@ -109,7 +116,7 @@ getMatchUrls <-
         collapse = NULL
       )
 
-    club_matches_raw <- .fetch(endpoint)
+    club_matches_raw <- .fetch(endpoint, access_token)
     if (class(club_matches_raw) != "list") {
       cli_abort("Matches for `{club_id}` cannot be found")
     }
@@ -162,22 +169,24 @@ getMatchUrls <-
 #' @description Fetches the record of match results for all players who have ever played a match for the club and are currently members of the club.
 #' Note: chess.com is temporarily limiting finished matches to the most recent 500 due to performance.
 #' @param club_id ID of the club you want the leader board for
+#' @param access_token The access token for chess.com APIs obtained through authorization
 #' @returns A Tibble of club members who have participated in matches and their all-time records
 #' @note Chess.com public API only returns the most recent 500 completed matches due to performance issues. Until that is resolved by the chess.com team, this function may NOT return the all-time stats and results may not be accurate for all clubs.
 #' @source chess.com public API
 #' @export
-getAllTimeLeaderBoard <- function(club_id) {
+getAllTimeLeaderBoard <- function(club_id, access_token = NA) {
   # Match IDs for all daily events
   match_ids <-
     getMatchIds(
       club_id,
       include_finished = TRUE,
       include_in_progress = TRUE,
-      include_upcoming = FALSE
+      include_upcoming = FALSE,
+      access_token = access_token
     )
 
   all_time_match_results <-
-    getMatchDetailsForMatches(club_id, match_ids) %>%
+    getMatchDetailsForMatches(club_id, match_ids, access_token) %>%
     mutate(wins = if_else(played_as_white == 1, 1, 0, 0)) %>%
     mutate(wins = if_else(played_as_black == 1, wins + 1, wins, wins)) %>%
     mutate(draws = if_else(played_as_white == .5, 1, 0, 0)) %>%
@@ -204,11 +213,12 @@ getAllTimeLeaderBoard <- function(club_id) {
 #' @title Get the results of team matches against other clubs
 #' @description Fetches the completed team matches and returns a the given club's record against other clubs.
 #' @param club_id ID of the club you want the results for
+#' @param access_token The access token for chess.com APIs obtained through authorization
 #' @returns A Tibble of the club's team match record versus other clubs
 #' @note Chess.com public API only returns the most recent 500 completed matches due to performance issues. Until that is resolved by the chess.com team, this function may NOT return all the clubs ever played.
 #' @source chess.com public API
 #' @export
-getMatchResults <- function(club_id) {
+getMatchResults <- function(club_id, access_token = NA) {
   baseUrl <- "https://api.chess.com/pub/club/"
   endpoint <-
     paste0(baseUrl,
@@ -218,7 +228,7 @@ getMatchResults <- function(club_id) {
       collapse = NULL
     )
 
-  matches_raw <- .fetch(endpoint)
+  matches_raw <- .fetch(endpoint, access_token)
   if (class(matches_raw) != "list") {
     cli_abort("Matches for `{club_id}` cannot be found")
   }
@@ -251,6 +261,7 @@ getMatchResults <- function(club_id) {
 #' @param club_id ID of the club you manage
 #' @param max_timeouts The maximum timeout percentage allowed for participation
 #' @param min_total_games The minimum number of completed games allowed for participation
+#' @param access_token The access token for chess.com APIs obtained through authorization
 #' @returns A list of players ineligible to participate in the match, filtered by the provided criteria
 #' @source chess.com public API
 #' @export
@@ -258,7 +269,8 @@ getPlayersToRemoveFromMatch <-
   function(match_id,
            club_id,
            max_timeouts,
-           min_total_games) {
+           min_total_games,
+           access_token = NA) {
     if (is.na(match_id)) {
       cli_abort("{.var match_id} cannot be NA")
     }
@@ -272,7 +284,8 @@ getPlayersToRemoveFromMatch <-
       cli_abort("{.var min_total_games} cannot be NA")
     }
 
-    match_details <- getMatchDetailsForMatches(club_id, match_id)
+    match_details <-
+      getMatchDetailsForMatches(club_id, match_id, access_token)
 
     players <- match_details$username
 
@@ -299,7 +312,7 @@ getPlayersToRemoveFromMatch <-
     cli_alert("Fetching stats for {total_players} users")
     cli_progress_bar("Fetching stats...", total = total_players)
     for (player in players) {
-      stats <- getUserStats(user_id = player)
+      stats <- getUserStats(user_id = player, access_token)
       if (class(stats) == "data.frame") {
         user_details <- user_details %>% rbind(stats)
       }

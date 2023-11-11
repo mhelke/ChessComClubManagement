@@ -15,6 +15,7 @@
 #' @param min_days_last_online The number of days ago since the user was last online
 #' @param min_rating The minimum allowed rating of the user
 #' @param country_code The country code on the user's profile. Each country has a 2 character code assigned by chess.com
+#' @param access_token The access token for chess.com APIs obtained through authorization
 #' @returns Data frame of ideal players within a given club
 #' @source Chess.com public API
 #' @export
@@ -25,7 +26,8 @@ getUsersToInvite <- function(club_id,
                              min_months_account_age = 0,
                              min_days_last_online = NA,
                              min_rating = 0,
-                             country_code = NA) {
+                             country_code = NA,
+                             access_token = NA) {
   # Verify given data is accurate
   if (nchar(country_code) != 2 & !is.na(country_code)) {
     cli_abort(
@@ -36,7 +38,7 @@ getUsersToInvite <- function(club_id,
   }
 
   # Fetch club members
-  invites <- getAllMemberStats(club_id)
+  invites <- getAllMemberStats(club_id, access_token)
 
   # Process the dates needed for calculations
   invites <- invites %>%

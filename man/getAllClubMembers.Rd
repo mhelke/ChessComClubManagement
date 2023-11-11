@@ -7,10 +7,12 @@
 chess.com public API
 }
 \usage{
-getAllClubMembers(club_id)
+getAllClubMembers(club_id, access_token = NA)
 }
 \arguments{
 \item{club_id}{ID of the club you want the members of}
+
+\item{access_token}{The access token for chess.com APIs obtained through authorization}
 }
 \value{
 A Tibble of all members in the club and their join date

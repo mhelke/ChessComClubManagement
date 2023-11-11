@@ -7,12 +7,14 @@
 chess.com public API
 }
 \usage{
-getInactiveMatchPlayers(club_id, nDays = 90)
+getInactiveMatchPlayers(club_id, nDays = 90, access_token = NA)
 }
 \arguments{
 \item{club_id}{ID of the club you want the list of inactive members for}
 
 \item{nDays}{The number of days the user has been inactive}
+
+\item{access_token}{The access token for chess.com APIs obtained through authorization}
 }
 \value{
 Tibble of members who have not joined a match in the past n days along with the date they joined the club
