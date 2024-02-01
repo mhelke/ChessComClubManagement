@@ -38,7 +38,20 @@
     found_matching_team <- TRUE
   }
 
+  # A result of 'lose' for both teams in a finished match indicates the match was canceled.
+  is_canceled <-
+    (
+      match_details_raw$status == 'finished' &&
+        team1$result == 'lose' && team2$result == 'lose'
+    )
+
   if (found_matching_team) {
+    # If the match was canceled return an empty tibble
+    if (!is.na(is_canceled) && is_canceled) {
+      cli_warn("Match `{match_id}` was canceled")
+      return(empty_tibble)
+    }
+
     # No players have registered yet, return an empty tibble
     if (!"players" %in% names(my_team)) {
       cli_warn("Can't find players registered for team `{club_id}` for match `{match_id}`")
