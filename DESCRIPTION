@@ -1,7 +1,7 @@
 Package: ChessComClubManagement
 Type: Package
 Title: Retrieve data for a chess.com club
-Version: 1.3.1
+Version: 1.3.2
 Author: Matthew Helke
 Maintainer: Matthew Helke <matthewhelke52@gmail.com>
 Description: Retrieve cleaned data for any chess.com club. Retrieve member details, team match details, all time team match leaderboard, users who qualify to join a club or match based on a set of criteria.
