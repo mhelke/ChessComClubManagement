@@ -18,11 +18,10 @@ getAllMembersByActivity <- function(club_id, access_token = NA) {
   baseUrl <- "https://api.chess.com/pub/club/"
   endpoint <-
     paste0(baseUrl,
-      club_id,
-      "/members",
-      sep = "",
-      collapse = NULL
-    )
+           club_id,
+           "/members",
+           sep = "",
+           collapse = NULL)
   member_activity_raw <- .fetch(endpoint, access_token)
   if (class(member_activity_raw) != "list") {
     cli_abort("Members for club `{club_id}` cannot be found")
@@ -83,9 +82,8 @@ getInactiveMatchPlayers <-
            access_token = NA) {
     # Get all match Ids
     all_match_ids <- getMatchIds(club_id,
-      nDays = nDays,
-      access_token = access_token
-    )
+                                 nDays = nDays,
+                                 access_token = access_token)
 
     all_match_details_raw <-
       getMatchDetailsForMatches(club_id, all_match_ids, access_token)
@@ -126,6 +124,12 @@ getUserStats <- function(user_id, access_token = NA) {
     return(NA)
   }
 
+  # Chess.com add an entry which is a list of all streaming platforms the user is active on.
+  # This list causes converting to a data frame to fail. The information is irrelevant to this project, so it's removed.
+  if ("streaming_platforms" %in% names(user_profile)) {
+    user_profile <-
+      user_profile[-which(names(user_profile) == "streaming_platforms")]
+  }
   user_profile <-
     as.data.frame(user_profile) %>%
     .add_cols(cols = c("name"))
@@ -133,11 +137,10 @@ getUserStats <- function(user_id, access_token = NA) {
   baseUrl <- "https://api.chess.com/pub/player/"
   endpoint <-
     paste0(baseUrl,
-      user_id,
-      "/stats",
-      sep = "",
-      collapse = NULL
-    )
+           user_id,
+           "/stats",
+           sep = "",
+           collapse = NULL)
 
   user_stats_raw <- .fetch(endpoint, access_token)
   if (class(user_stats_raw) != "list") {
