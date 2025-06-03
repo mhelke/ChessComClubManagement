@@ -18,7 +18,7 @@ getMatchResults(club_id, access_token = NA)
 A Tibble of the club's team match record versus other clubs
 }
 \description{
-Fetches the completed team matches and returns a the given club's record against other clubs.
+Fetches the completed team matches and returns a the given club's record against other clubs grouped by club, time control, and game type.
 }
 \note{
 Chess.com public API only returns the most recent 500 completed matches due to performance issues. Until that is resolved by the chess.com team, this function may NOT return all the clubs ever played.
