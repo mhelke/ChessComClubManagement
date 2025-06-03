@@ -233,16 +233,51 @@ getMatchResults <- function(club_id, access_token = NA) {
     cli_abort("Matches for `{club_id}` cannot be found")
   }
 
-  matches <- matches_raw$finished %>%
+  match_info <- matches_raw$finished %>%
     filter(time_class == "daily") %>%
-    select(opponent, result) %>%
-    mutate(opponent = sapply(opponent, .getId)) %>%
+    select(`@id`, -opponent, result) %>%
+    mutate(match_data = map(`@id`, ~ .fetch(.x, access_token))) %>%
+    select(-`@id`) %>%
+    unnest_wider(match_data) %>%
+    mutate(settings = map(settings, as.data.frame)) %>%
+    unnest(settings) %>%
+    rowwise() %>%
+    mutate(
+      opponent = case_when(
+      .getId(teams$team1$`@id`) != club_id ~ teams$team1$name,
+      .getId(teams$team2$`@id`) != club_id ~ teams$team2$name,
+      TRUE ~ NA_character_
+      )
+    ) %>%
+    mutate(team1_score = teams$team1$score) %>%
+    mutate(team2_score = teams$team2$score) %>%
+    ungroup() %>%
+    select(
+      opponent,
+      result,
+      boards,
+      rules,
+      time_control,
+      team1_score,
+      team2_score
+    )
+
+  matches <- match_info %>%
+    mutate(canceled = if_else(result == "draw" & team1_score == 0 & team2_score == 0, TRUE, FALSE)) %>%
+    filter(!canceled) %>%
+    select(-canceled, -team1_score, -team2_score) %>%
     mutate(wins = if_else(result == "win", 1, 0)) %>%
     mutate(draws = if_else(result == "draw", 1, 0)) %>%
     mutate(losses = if_else(result == "lose", 1, 0)) %>%
-    group_by(opponent) %>%
+    rowwise() %>%
+    mutate(time_control = as.numeric(str_split_1(time_control, "/")[2]) / 86400) %>%
+    ungroup() %>%
+    mutate(rules = ifelse(rules == "chess", "Standard", rules)) %>%
+    mutate(rules = ifelse(rules == "chess960", "Chess960", rules)) %>%
+    group_by(opponent, rules, time_control) %>%
     summarise(
       matches_played = n(),
+      avg_boards = round(mean(boards)),
       wins = sum(wins),
       draws = sum(draws),
       losses = sum(losses)
