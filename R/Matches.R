@@ -238,15 +238,37 @@ getMatchResults <- function(club_id, access_token = NA) {
     select(`@id`, -opponent, result) %>%
     mutate(match_data = map(`@id`, ~ .fetch(.x, access_token))) %>%
     select(-`@id`) %>%
+    filter(!is.null(match_data)) %>%
     unnest_wider(match_data) %>%
     mutate(settings = map(settings, as.data.frame)) %>%
     unnest(settings) %>%
     rowwise() %>%
     mutate(
       opponent = case_when(
-      .getId(teams$team1$`@id`) != club_id ~ teams$team1$name,
-      .getId(teams$team2$`@id`) != club_id ~ teams$team2$name,
-      TRUE ~ NA_character_
+        .getId(teams$team1$`@id`) != club_id ~ teams$team1$name,
+        .getId(teams$team2$`@id`) != club_id ~ teams$team2$name,
+        TRUE ~ NA_character_
+      )
+    ) %>%
+    mutate(
+      opponent_club_members = case_when(
+        .getId(teams$team1$`@id`) != club_id ~ {
+          club_details <- .fetch(teams$team1$`@id`, access_token)
+            if (!is.list(club_details)) {
+            NA_integer_
+            } else {
+            club_details$members_count
+            }
+        },
+        .getId(teams$team2$`@id`) != club_id ~ {
+          club_details <- .fetch(teams$team2$`@id`, access_token)
+          if (!is.list(club_details)) {
+            NA_integer_
+          } else {
+            club_details$members_count
+          }
+        },
+        TRUE ~ NA_integer_
       )
     ) %>%
     mutate(team1_score = teams$team1$score) %>%
@@ -255,9 +277,9 @@ getMatchResults <- function(club_id, access_token = NA) {
     select(
       opponent,
       result,
-      boards,
       rules,
       time_control,
+      opponent_club_members,
       team1_score,
       team2_score
     )
@@ -274,13 +296,12 @@ getMatchResults <- function(club_id, access_token = NA) {
     ungroup() %>%
     mutate(rules = ifelse(rules == "chess", "Standard", rules)) %>%
     mutate(rules = ifelse(rules == "chess960", "Chess960", rules)) %>%
-    group_by(opponent, rules, time_control) %>%
+    group_by(opponent, rules, time_control, opponent_club_members) %>%
     summarise(
       matches_played = n(),
-      avg_boards = round(mean(boards)),
       wins = sum(wins),
       draws = sum(draws),
-      losses = sum(losses)
+      losses = sum(losses),
     ) %>%
     arrange(desc(matches_played))
 
