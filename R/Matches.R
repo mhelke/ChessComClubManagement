@@ -254,11 +254,11 @@ getMatchResults <- function(club_id, access_token = NA) {
       opponent_club_members = case_when(
         .getId(teams$team1$`@id`) != club_id ~ {
           club_details <- .fetch(teams$team1$`@id`, access_token)
-            if (!is.list(club_details)) {
+          if (!is.list(club_details)) {
             NA_integer_
-            } else {
+          } else {
             club_details$members_count
-            }
+          }
         },
         .getId(teams$team2$`@id`) != club_id ~ {
           club_details <- .fetch(teams$team2$`@id`, access_token)
