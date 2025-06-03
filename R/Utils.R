@@ -41,8 +41,11 @@
   # A result of 'lose' for both teams in a finished match indicates the match was canceled.
   is_canceled <-
     (
-      match_details_raw$status == "finished" &&
-        team1$result == "lose" && team2$result == "lose"
+      match_details_raw$status == "finished"
+      && team1$score == 0
+      && team2$score == 0
+      && team1$result == "draw"
+      && team2$result == "draw"
     )
 
   if (found_matching_team) {
