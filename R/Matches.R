@@ -244,9 +244,9 @@ getMatchResults <- function(club_id, access_token = NA) {
     rowwise() %>%
     mutate(
       opponent = case_when(
-      .getId(teams$team1$`@id`) != club_id ~ teams$team1$name,
-      .getId(teams$team2$`@id`) != club_id ~ teams$team2$name,
-      TRUE ~ NA_character_
+        .getId(teams$team1$`@id`) != club_id ~ teams$team1$name,
+        .getId(teams$team2$`@id`) != club_id ~ teams$team2$name,
+        TRUE ~ NA_character_
       )
     ) %>%
     mutate(team1_score = teams$team1$score) %>%
