@@ -255,24 +255,10 @@ getMatchResults <- function(club_id, access_token = NA) {
       )
     ) %>%
     mutate(
-      opponent_club_members = case_when(
-        .getId(teams$team1$`@id`) != club_id ~ {
-          club_details <- .fetch(teams$team1$`@id`, access_token)
-          if (!is.list(club_details)) {
-            NA_integer_
-          } else {
-            club_details$members_count
-          }
-        },
-        .getId(teams$team2$`@id`) != club_id ~ {
-          club_details <- .fetch(teams$team2$`@id`, access_token)
-          if (!is.list(club_details)) {
-            NA_integer_
-          } else {
-            club_details$members_count
-          }
-        },
-        TRUE ~ NA_integer_
+      opponent_id = case_when(
+        .getId(teams$team1$`@id`) != club_id ~ teams$team1$`@id`,
+        .getId(teams$team2$`@id`) != club_id ~ teams$team2$`@id`,
+        TRUE ~ NA_character_
       )
     ) %>%
     mutate(team1_score = teams$team1$score) %>%
@@ -283,7 +269,7 @@ getMatchResults <- function(club_id, access_token = NA) {
       result,
       rules,
       time_control,
-      opponent_club_members,
+      opponent_id,
       team1_score,
       team2_score
     )
@@ -300,14 +286,36 @@ getMatchResults <- function(club_id, access_token = NA) {
     ungroup() %>%
     mutate(rules = ifelse(rules == "chess", "Standard", rules)) %>%
     mutate(rules = ifelse(rules == "chess960", "Chess960", rules)) %>%
-    group_by(opponent, rules, time_control, opponent_club_members) %>%
+    group_by(opponent, rules, time_control, opponent_id) %>%
     summarise(
       matches_played = n(),
       wins = sum(wins),
       draws = sum(draws),
       losses = sum(losses),
     ) %>%
-    arrange(desc(matches_played))
+    arrange(desc(matches_played)) %>%
+    rowwise() %>%
+    mutate(
+      opponent_club_members = {
+      club_details <- .fetch(opponent_id, access_token)
+      if (!is.list(club_details)) {
+        NA_integer_
+      } else {
+        club_details$members_count
+      }
+      }
+    ) %>%
+    ungroup() %>% 
+    select(
+      opponent,
+      rules,
+      time_control,
+      opponent_club_members,
+      matches_played,
+      wins,
+      draws,
+      losses
+    )
 
   return(matches)
 }
