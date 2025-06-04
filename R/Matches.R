@@ -236,7 +236,8 @@ getMatchResults <- function(club_id, access_token = NA) {
   match_info <- matches_raw$finished %>%
     filter(time_class == "daily") %>%
     select(`@id`, -opponent, result) %>%
-    mutate(match_data = map(`@id`, ~ .fetch(.x, access_token))) %>%
+    mutate(match_data = map(`@id`, ~ tryCatch(.fetch(.x, access_token), error = function(e) NA))) %>%
+    filter(is.list(match_data)) %>%
     select(-`@id`) %>%
     filter(!is.null(match_data)) %>%
     unnest_wider(match_data) %>%
