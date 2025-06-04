@@ -238,32 +238,14 @@ getMatchResults <- function(club_id, access_token = NA) {
 
   match_info <- matches_raw$finished %>%
     filter(time_class == "daily") %>%
-    select(`@id`, -opponent, result)
-
-  match_data_list <- list()
-  total_matches <- length(match_info$`@id`)
-  cli_alert("Fetching data for {total_matches} matches")
-  cli_progress_bar("Fetching match data...", total = total_matches)
-  for (match_id in match_info$`@id`) {
-    match_data <- tryCatch(.fetch(match_id, access_token), error = function(e) NA)
-    Sys.sleep(0.5)  # To avoid hitting API rate limits
-    match_data_list <- append(match_data_list, list(match_data))
-    cli_progress_update()
-  }
-  cli_progress_done()
-  cli_alert_success("Finished fetching data for {total_matches} matches")
-
-  match_info <- match_info %>%
-    mutate(match_data = match_data_list) %>%
-    filter(is.list(match_data) & !is.na(match_data))
-
-  if (length(match_info$`@id`) == 0) {
-    cli_warn("No matches found for club `{club_id}`")
-    return(tibble())
-  }
-
-  match_info < match_info %>%
+    select(`@id`, -opponent, result) %>%
+    mutate(match_data = map(`@id`, ~ {
+      Sys.sleep(0.5)
+      tryCatch(.fetch(.x, access_token), error = function(e) NA)
+    })) %>%
+    filter(is.list(match_data)) %>%
     select(-`@id`) %>%
+    filter(!is.null(match_data)) %>%
     unnest_wider(match_data) %>%
     mutate(settings = map(settings, as.data.frame)) %>%
     unnest(settings) %>%
