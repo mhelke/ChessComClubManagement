@@ -241,7 +241,13 @@ getMatchResults <- function(club_id, access_token = NA) {
     select(`@id`, -opponent, result) %>%
     mutate(match_data = map(`@id`, ~ {
       Sys.sleep(0.5)
-      tryCatch(.fetch(.x, access_token), error = function(e) NA)
+      tryCatch(
+      .fetch(.x, access_token),
+      error = function(e) {
+        cli_alert_warning("Error fetching match data for {.x}: {e$message}")
+        NA
+      }
+      )
     })) %>%
     filter(is.list(match_data)) %>%
     select(-`@id`) %>%
