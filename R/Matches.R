@@ -246,6 +246,7 @@ getMatchResults <- function(club_id, access_token = NA) {
   cli_progress_bar("Fetching match data...", total = total_matches)
   for (match_id in match_info$`@id`) {
     match_data <- tryCatch(.fetch(match_id, access_token), error = function(e) NA)
+    Sys.sleep(0.5)  # To avoid hitting API rate limits
     match_data_list <- append(match_data_list, list(match_data))
     cli_progress_update()
   }
