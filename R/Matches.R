@@ -3,6 +3,9 @@
 #' @importFrom httr GET
 #' @importFrom stringr str_split_1
 #' @importFrom lubridate as_datetime ymd
+#' @importFrom purrr map
+#' @importFrom tidyr unnest_wider
+#' @importFrom tidyr unnest
 
 # Match Data ---------------------------
 
