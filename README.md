@@ -63,6 +63,16 @@ Recruit users to join your team based on the following criteria:
 2. Install the package `devtools` from CRAN: `install.packages('devtools')`
 3. Run the following command from the R console: `devtools::install_github('mhelke/ChessComClubManagement')`
 
+## Chess.com API User-Agent
+
+Chess.com requires API clients to identify themselves with a recognizable User-Agent. Set `CHESSCOM_USER_AGENT` before calling this package; the package does not provide a default identity.
+
+```r
+Sys.setenv(CHESSCOM_USER_AGENT = "YourApp/1.0 (contact: you@example.com)")
+```
+
+Requests fail clearly if this environment variable is not set.
+
 ## Author
 
 Matthew Helke

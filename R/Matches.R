@@ -249,9 +249,8 @@ getMatchResults <- function(club_id, access_token = NA) {
       }
       )
     })) %>%
-    filter(is.list(match_data)) %>%
+    filter(map_lgl(match_data, ~ is.list(.x) && !is.null(names(.x)) && length(names(.x)) > 0 && all(nzchar(names(.x))))) %>%
     select(-`@id`) %>%
-    filter(!is.null(match_data)) %>%
     unnest_wider(match_data) %>%
     mutate(settings = map(settings, as.data.frame)) %>%
     unnest(settings) %>%

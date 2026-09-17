@@ -169,21 +169,39 @@
   return(id)
 }
 
-.fetch <- function(endpoint, token) {
-  if (is.na(token)) {
-    response <- GET(endpoint)
-  } else {
-    authorization <- paste0("Bearer ", token)
-    response <-
-      GET(endpoint, add_headers(Authorization = authorization))
+.fetch <- function(endpoint, token = NA) {
+  user_agent <- Sys.getenv("CHESSCOM_USER_AGENT", unset = NA_character_)
+  if (is.na(user_agent) || !nzchar(trimws(user_agent))) {
+    cli_abort("CHESSCOM_USER_AGENT must be set for Chess.com requests")
+  }
+  has_token <- !is.null(token) && length(token) == 1 && !is.na(token) && nzchar(token)
+
+  response <- tryCatch({
+    request_options <- list(httr::user_agent(user_agent), httr::timeout(30))
+    if (has_token) {
+      request_options <- c(request_options, list(httr::add_headers(Authorization = paste0("Bearer ", token))))
+    }
+    do.call(httr::GET, c(list(url = endpoint), request_options))
+  }, error = function(error) {
+    cli_inform(c("Failed to fetch data", "x" = "Request to {endpoint} failed: {error$message}"))
+    NULL
+  })
+
+  if (is.null(response)) {
+    return(NULL)
   }
 
   status <- response$status_code
-  data <- NA
-  if (between(status, 200, 299)) {
-    data <- fromJSON(rawToChar(response$content), flatten = TRUE)
-  } else {
+  if (!between(status, 200, 299)) {
     cli_inform(c("Failed to fetch data", "x" = "HTTP {status} response received from {endpoint}"))
+    return(NULL)
   }
-  return(data)
+
+  tryCatch(
+    fromJSON(rawToChar(response$content), flatten = TRUE),
+    error = function(error) {
+      cli_inform(c("Failed to fetch data", "x" = "Invalid JSON received from {endpoint}: {error$message}"))
+      NULL
+    }
+  )
 }
